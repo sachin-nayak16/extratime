@@ -129,108 +129,147 @@ function showPanel(name, btn) {
   if (name === 'schedule') loadSchedule();
 }
 
-// ── CROSSWORD ─────────────────────────────────────────────
-function cwPreview() {
-  for (let i = 1; i <= 6; i++) {
-    const ans = document.getElementById(`cw-a${i}`)?.value?.trim() || '';
-    const wl = document.getElementById(`cw-wl${i}`)?.value?.trim() || '';
-    const prev = document.getElementById(`cw-prev${i}`);
-    if (!prev) continue;
-    if (!ans) { prev.textContent = ''; continue; }
-    if (wl) {
-      const parts = wl.split(',').map(x => parseInt(x.trim())).filter(n => !isNaN(n));
-      const sum = parts.reduce((a,b) => a+b, 0);
-      if (sum === ans.length) prev.textContent = `→ (${wl}) ✓`;
-      else prev.textContent = `⚠ sum ${sum} ≠ ${ans.length}`;
-    } else {
-      prev.textContent = `→ (${ans.length})`;
-    }
-  }
-}
+// ── CROSSWORD (AUTO-SOLVER) ───────────────────────────────
+// You just enter 6 answers + clues. The solver figures out
+// which are across/down and where they go on the grid.
 
-function validateCW() {
+let cwSolution = null; // stores the solved layout
+
+function cwAutoSolve() {
+  cwSolution = null;
   cwValidated = false;
+  document.getElementById('cw-save-btn').disabled = true;
   const statusEl = document.getElementById('cw-status');
   statusEl.style.display = 'block';
-  document.getElementById('cw-save-btn').disabled = true;
 
-  const answers = [1,2,3,4,5,6].map(i => document.getElementById(`cw-a${i}`)?.value?.trim()?.toUpperCase() || '');
+  const answers = [1,2,3,4,5,6].map(i =>
+    (document.getElementById(`cw-a${i}`)?.value?.trim()?.toUpperCase() || '').replace(/\s/g,'')
+  );
+  const clues = [1,2,3,4,5,6].map(i =>
+    document.getElementById(`cw-c${i}`)?.value?.trim() || ''
+  );
+  const wordLengths = [1,2,3,4,5,6].map(i =>
+    document.getElementById(`cw-wl${i}`)?.value?.trim() || null
+  );
+
+  // Validate all filled in
   if (answers.some(a => !a)) {
     statusEl.className = 'validate-status validate-fail';
-    statusEl.textContent = '❌ Please fill in all 6 answers before validating.';
+    statusEl.textContent = '❌ Please fill in all 6 answers before solving.';
     return;
   }
-
-  const across = answers.slice(0, 3);
-  const down = answers.slice(3);
-
-  // Find all intersections
-  const ints = [];
-  across.forEach((aw, ai) => {
-    down.forEach((dw, di) => {
-      for (let i = 0; i < aw.length; i++) {
-        for (let j = 0; j < dw.length; j++) {
-          if (aw[i] === dw[j]) ints.push({ ai, di, i, j, ch: aw[i] });
-        }
-      }
-    });
-  });
-
-  if (ints.length === 0) {
+  if (answers.some(a => a.length < 4)) {
     statusEl.className = 'validate-status validate-fail';
-    statusEl.textContent = '❌ No intersecting letters found between across and down answers. Change one or more answers so they share common letters.';
+    statusEl.textContent = '❌ All answers must be at least 4 letters long.';
     return;
   }
-
-  const acrossCovered = new Set(ints.map(x => x.ai));
-  const downCovered = new Set(ints.map(x => x.di));
-
-  if (acrossCovered.size < 2 || downCovered.size < 2) {
+  if (clues.some(c => !c)) {
     statusEl.className = 'validate-status validate-fail';
-    statusEl.textContent = '❌ Not enough intersections. Each word needs to cross at least one perpendicular word. Adjust your answers.';
+    statusEl.textContent = '❌ Please fill in all 6 clues.';
     return;
   }
 
-  // Check word lengths
-  for (let i = 1; i <= 6; i++) {
-    const ans = answers[i-1];
-    const wl = document.getElementById(`cw-wl${i}`)?.value?.trim();
-    if (wl) {
-      const parts = wl.split(',').map(x => parseInt(x.trim())).filter(n => !isNaN(n));
+  // Validate word lengths if provided
+  for (let i = 0; i < 6; i++) {
+    if (wordLengths[i]) {
+      const parts = wordLengths[i].split(',').map(x => parseInt(x.trim())).filter(n => !isNaN(n));
       const sum = parts.reduce((a,b) => a+b, 0);
-      if (sum !== ans.length) {
+      if (sum !== answers[i].length) {
         statusEl.className = 'validate-status validate-fail';
-        statusEl.textContent = `❌ Word length mismatch for clue ${i}: "${wl}" sums to ${sum} but answer has ${ans.length} letters.`;
+        statusEl.textContent = `❌ Word length mismatch for answer ${i+1}: "${wordLengths[i]}" sums to ${sum} but "${answers[i]}" has ${answers[i].length} letters.`;
         return;
       }
     }
   }
 
-  cwValidated = true;
   statusEl.className = 'validate-status validate-ok';
-  statusEl.textContent = `✓ Valid grid! ${ints.length} intersections found. Hard constraints verified. Ready to save.`;
-  document.getElementById('cw-save-btn').disabled = false;
+  statusEl.textContent = '⏳ Solving grid layout...';
+
+  // Run solver (async to not block UI)
+  setTimeout(() => {
+    const solution = CW_SOLVER.solve(answers);
+    if (!solution) {
+      statusEl.className = 'validate-status validate-fail';
+      statusEl.innerHTML = `❌ Could not find a valid grid arrangement for these 6 words.<br>
+        <strong>Tips:</strong> Try words that share more common letters. 
+        For example, if two words both contain the letter R or E they are more likely to intersect.
+        You can also try swapping one word for a synonym.`;
+      return;
+    }
+
+    // Attach clues and word lengths
+    solution.across.forEach((a, i) => {
+      const origIdx = solution.acrossOrigIdx[i];
+      a.clue = clues[origIdx];
+      a.wordLengths = wordLengths[origIdx];
+      a.display = wordLengths[origIdx] ? `(${wordLengths[origIdx]})` : `(${a.word.length})`;
+    });
+    solution.down.forEach((d, i) => {
+      const origIdx = solution.downOrigIdx[i];
+      d.clue = clues[origIdx];
+      d.wordLengths = wordLengths[origIdx];
+      d.display = wordLengths[origIdx] ? `(${wordLengths[origIdx]})` : `(${d.word.length})`;
+    });
+
+    cwSolution = solution;
+    cwValidated = true;
+    document.getElementById('cw-save-btn').disabled = false;
+
+    // Show what was assigned
+    const acrossWords = solution.across.map((a,i) => `${i+1} Across: ${a.word} ${a.display}`).join(' · ');
+    const downWords = solution.down.map((d,i) => `${i+4} Down: ${d.word} ${d.display}`).join(' · ');
+    const intCount = solution.intersections.length;
+
+    statusEl.className = 'validate-status validate-ok';
+    statusEl.innerHTML = `✓ Grid solved! ${intCount} intersections found.<br>
+      <strong>Across:</strong> ${acrossWords}<br>
+      <strong>Down:</strong> ${downWords}<br>
+      <small>The solver chose the arrangement with the most intersections.</small>`;
+  }, 50);
 }
 
 async function saveCW(asDraft = false) {
-  if (!asDraft && !cwValidated) { showToast('Please validate the crossword first.'); return; }
+  if (!asDraft && !cwValidated) { showToast('Please auto-solve the crossword first.'); return; }
+  if (!asDraft && !cwSolution) { showToast('No valid solution found yet.'); return; }
 
-  const crossword = {
-    across: [1,2,3].map(i => ({
-      answer: document.getElementById(`cw-a${i}`).value.trim().toUpperCase(),
-      clue: document.getElementById(`cw-c${i}`).value.trim(),
-      wordLengths: document.getElementById(`cw-wl${i}`).value.trim() || null,
-    })),
-    down: [4,5,6].map(i => ({
-      answer: document.getElementById(`cw-a${i}`).value.trim().toUpperCase(),
-      clue: document.getElementById(`cw-c${i}`).value.trim(),
-      wordLengths: document.getElementById(`cw-wl${i}`).value.trim() || null,
-    })),
-    draft: asDraft,
-  };
+  let crossword;
+  if (asDraft) {
+    // Save raw entries as draft without a solved layout
+    crossword = {
+      draft: true,
+      raw: [1,2,3,4,5,6].map(i => ({
+        answer: document.getElementById(`cw-a${i}`)?.value?.trim()?.toUpperCase() || '',
+        clue: document.getElementById(`cw-c${i}`)?.value?.trim() || '',
+        wordLengths: document.getElementById(`cw-wl${i}`)?.value?.trim() || null,
+      })),
+    };
+  } else {
+    crossword = {
+      draft: false,
+      across: cwSolution.across.map((a, i) => ({
+        number: i + 1,
+        answer: a.word,
+        clue: a.clue,
+        wordLengths: a.wordLengths,
+        display: a.display,
+        row: a.row,
+        colStart: a.colStart,
+      })),
+      down: cwSolution.down.map((d, i) => ({
+        number: i + 4,
+        answer: d.word,
+        clue: d.clue,
+        wordLengths: d.wordLengths,
+        display: d.display,
+        col: d.col,
+        rowStart: d.rowStart,
+      })),
+      intersections: cwSolution.intersections,
+    };
+  }
 
   await upsertContent({ crossword });
-  showToast(asDraft ? 'Crossword saved as draft.' : 'Crossword saved!');
+  showToast(asDraft ? 'Draft saved!' : 'Crossword saved!');
   updateContentStatus();
 }
 
