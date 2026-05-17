@@ -91,18 +91,12 @@ function populateAllForms(data) {
   if (data.quiz_questions) {
     data.quiz_questions.forEach((q, i) => {
       const idx = i + 1;
-      const qEl = document.getElementById(`q-text-${idx}`);
-      if (qEl) qEl.value = q.question;
-      q.options?.forEach((opt, j) => {
-        const optEl = document.getElementById(`q-opt-${idx}-${j+1}`);
-        if (optEl) optEl.value = opt;
-      });
-      const radio = document.querySelector(`input[name="q${idx}-ans"][value="${q.answer+1}"]`);
-      if (radio) radio.checked = true;
-      const diffEl = document.getElementById(`q-diff-${idx}`);
-      if (diffEl) diffEl.value = q.difficulty;
-      const expEl = document.getElementById(`q-exp-${idx}`);
-      if (expEl) expEl.value = q.explanation || '';
+      const qEl = document.getElementById(`q-text-${idx}`); if (qEl) qEl.value = q.question || '';
+      const aEl = document.getElementById(`q-ans-${idx}`); if (aEl) aEl.value = q.answer || '';
+      const hEl = document.getElementById(`q-hint-${idx}`); if (hEl) hEl.value = q.hint || '';
+      const acEl = document.getElementById(`q-accepted-${idx}`); if (acEl) acEl.value = (q.accepted||[]).join(', ');
+      const dEl = document.getElementById(`q-diff-${idx}`); if (dEl) dEl.value = q.difficulty || 'easy';
+      const eEl = document.getElementById(`q-exp-${idx}`); if (eEl) eEl.value = q.explanation || '';
     });
   }
   // Decode
@@ -290,14 +284,23 @@ function buildQuizEditor() {
           <option value="hard" ${diffs[i-1]==='hard'?'selected':''}>Hard</option>
         </select>
       </div>
-      <div class="field"><label>Question <span class="req">*</span></label><input type="text" id="q-text-${i}" placeholder="Type your question here..."></div>
-      <p class="opt-hint">Enter 4 options. Select the radio button next to the correct answer.</p>
-      ${[1,2,3,4].map(j => `
-        <div class="opt-row">
-          <input type="radio" name="q${i}-ans" value="${j}">
-          <input type="text" id="q-opt-${i}-${j}" placeholder="Option ${j}">
-        </div>`).join('')}
-      <div class="field" style="margin-top:8px"><label>Explanation (shown after answer)</label><input type="text" id="q-exp-${i}" placeholder="Brief explanation of the correct answer"></div>
+      <div class="field"><label>Question <span class="req">*</span></label>
+        <input type="text" id="q-text-${i}" placeholder="e.g. Who scored the Hand of God goal in 1986?">
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>Correct answer <span class="req">*</span></label>
+          <input type="text" id="q-ans-${i}" placeholder="e.g. Maradona">
+        </div>
+        <div class="field"><label>Accepted variations <span class="hint">(comma separated)</span></label>
+          <input type="text" id="q-accepted-${i}" placeholder="e.g. maradona, diego maradona">
+        </div>
+      </div>
+      <div class="field"><label>Assist hint <span class="req">*</span> <span class="hint">Shown when player uses an Assist token</span></label>
+        <input type="text" id="q-hint-${i}" placeholder="e.g. Argentine legend, widely considered one of the greatest ever">
+      </div>
+      <div class="field"><label>Explanation <span class="hint">Shown after answer is submitted</span></label>
+        <input type="text" id="q-exp-${i}" placeholder="e.g. Diego Maradona scored with his hand against England in 1986">
+      </div>
     `;
     container.appendChild(div);
   }
@@ -308,14 +311,21 @@ async function saveQuiz() {
   for (let i = 1; i <= 5; i++) {
     const q = document.getElementById(`q-text-${i}`)?.value?.trim();
     if (!q) { showToast(`Question ${i} is empty.`); return; }
-    const opts = [1,2,3,4].map(j => document.getElementById(`q-opt-${i}-${j}`)?.value?.trim() || '');
-    if (opts.some(o => !o)) { showToast(`Please fill all 4 options for question ${i}.`); return; }
-    const radio = document.querySelector(`input[name="q${i}-ans"]:checked`);
-    if (!radio) { showToast(`Please select the correct answer for question ${i}.`); return; }
+    const ans = document.getElementById(`q-ans-${i}`)?.value?.trim();
+    if (!ans) { showToast(`Please fill in the correct answer for question ${i}.`); return; }
+    const hint = document.getElementById(`q-hint-${i}`)?.value?.trim();
+    if (!hint) { showToast(`Please fill in an Assist hint for question ${i}.`); return; }
+    const acceptedRaw = document.getElementById(`q-accepted-${i}`)?.value?.trim();
+    const accepted = acceptedRaw
+      ? acceptedRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+      : [ans.toLowerCase()];
+    // Always include the answer itself in accepted list
+    if (!accepted.includes(ans.toLowerCase())) accepted.unshift(ans.toLowerCase());
     questions.push({
       question: q,
-      options: opts,
-      answer: parseInt(radio.value) - 1,
+      answer: ans,
+      accepted,
+      hint,
       difficulty: document.getElementById(`q-diff-${i}`)?.value || 'easy',
       explanation: document.getElementById(`q-exp-${i}`)?.value?.trim() || '',
     });
