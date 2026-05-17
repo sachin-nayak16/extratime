@@ -1,0 +1,115 @@
+// ─── SUPABASE CONFIG ───────────────────────────────────────
+// Replace these with your actual Supabase project values
+// Found in: Supabase Dashboard → Project Settings → API
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+
+// ─── INIT SUPABASE ─────────────────────────────────────────
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ─── APP CONFIG ────────────────────────────────────────────
+const CONFIG = {
+  siteName: 'Extra Time',
+  siteUrl: 'https://extratime.vercel.app',
+  // Today's date string used as the daily key
+  today: new Date().toISOString().split('T')[0],
+};
+
+// ─── SCORING ───────────────────────────────────────────────
+const SCORING = {
+  quiz: {
+    perQuestion: 10,
+    assistCost: 5,
+  },
+  predictor: {
+    exactScore: 5,
+    correctOutcome: 3,
+    correctGoalDiff: 3,
+    scorerForward: 2,
+    scorerMidfielder: 3,
+    scorerDefender: 4,
+  },
+  heroes: {
+    // Score = Math.round((1 / guesses) * 100 * 4)
+    formula: (guesses) => Math.round((1 / guesses) * 100 * 4),
+  },
+};
+
+// ─── DAILY STATE ───────────────────────────────────────────
+// Tracks what the user has completed today
+// Persisted to localStorage, synced to Supabase when signed in
+const STATE_KEY = `et_state_${CONFIG.today}`;
+
+function getState() {
+  try {
+    return JSON.parse(localStorage.getItem(STATE_KEY)) || {};
+  } catch { return {}; }
+}
+
+function saveState(updates) {
+  const state = { ...getState(), ...updates };
+  localStorage.setItem(STATE_KEY, JSON.stringify(state));
+  return state;
+}
+
+// ─── SCORE TRACKING ────────────────────────────────────────
+function updateScoreDisplay() {
+  const state = getState();
+  let total = 0;
+  ['quiz', 'pred', 'heroes'].forEach(key => {
+    const el = document.getElementById(`sc-${key}`);
+    const score = state[`score_${key}`];
+    if (el) {
+      if (score !== undefined) {
+        el.textContent = score === 'Locked' ? 'Locked' : `${score}pts`;
+        if (typeof score === 'number') total += score;
+      }
+    }
+  });
+  const assists = state.assists ?? 0;
+  const el = document.getElementById('sc-assists');
+  if (el) el.textContent = assists;
+  const totalEl = document.getElementById('sc-total');
+  if (totalEl) totalEl.textContent = total;
+}
+
+// ─── TAB SWITCHER ──────────────────────────────────────────
+function showTab(name, btn) {
+  document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(`pane-${name}`).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'cw') document.getElementById('hidden-inp').focus();
+  if (name === 'lb') loadLeaderboard();
+}
+
+// ─── SHARE ─────────────────────────────────────────────────
+function shareScore(game) {
+  const state = getState();
+  const date = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  document.getElementById('share-date').textContent = date;
+  const scores = [];
+  if (state.cw_solved) scores.push(`Crossword ✓ (${state.cw_attempts || 0} attempts)`);
+  if (state.score_quiz !== undefined) scores.push(`Quiz: ${state.score_quiz}pts`);
+  if (state.score_pred === 'Locked') scores.push(`Predictor: Locked ✓`);
+  if (state.decode_solved) scores.push(`Decode This ✓`);
+  if (state.score_heroes !== undefined) scores.push(`WC Heroes: ${state.score_heroes}pts`);
+  document.getElementById('share-scores').innerHTML = scores.join('<br>') || 'No scores yet today';
+  document.getElementById('share-modal').style.display = 'flex';
+}
+
+function hideShare() {
+  document.getElementById('share-modal').style.display = 'none';
+}
+
+function copyShareCard() {
+  const state = getState();
+  const date = new Date().toLocaleDateString('en-GB');
+  let text = `Extra Time — ${date}\n`;
+  if (state.cw_solved) text += `Crossword ✓\n`;
+  if (state.score_quiz !== undefined) text += `Quiz: ${state.score_quiz}pts\n`;
+  if (state.score_heroes !== undefined) text += `WC Heroes: ${state.score_heroes}pts\n`;
+  text += `\n${CONFIG.siteUrl}`;
+  navigator.clipboard.writeText(text).then(() => alert('Copied to clipboard!')).catch(() => alert('Copy failed — please copy manually.'));
+}

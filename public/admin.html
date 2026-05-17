@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Extra Time — Admin</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin-body">
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <div class="login-logo">Extra <span>Time</span></div>
+    <p class="login-sub">Admin Panel</p>
+    <div class="field"><label>Password</label><input type="password" id="admin-pwd" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')adminLogin()"></div>
+    <button class="btn-full" onclick="adminLogin()">Sign in</button>
+    <p class="login-err" id="login-err" style="display:none">Incorrect password</p>
+  </div>
+</div>
+
+<!-- ADMIN APP -->
+<div id="admin-app" style="display:none">
+
+  <div class="admin-hdr">
+    <div class="admin-logo">Extra <span>Time</span> <em>Admin</em></div>
+    <div class="admin-hdr-r">
+      <span id="save-status" class="save-status"></span>
+      <button class="admin-signout" onclick="adminLogout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="admin-layout">
+
+    <!-- SIDEBAR -->
+    <div class="admin-sidebar">
+      <div class="sidebar-date-wrap">
+        <label class="sidebar-label">Content date</label>
+        <input type="date" id="global-date" class="date-picker" onchange="onDateChange()">
+        <div class="date-status" id="date-status"></div>
+      </div>
+      <nav class="admin-nav">
+        <button class="anav active" onclick="showPanel('dashboard',this)">Dashboard</button>
+        <button class="anav" onclick="showPanel('crossword',this)">Crossword</button>
+        <button class="anav" onclick="showPanel('quiz',this)">Quiz</button>
+        <button class="anav" onclick="showPanel('predictor',this)">Super Predictor</button>
+        <button class="anav" onclick="showPanel('decode',this)">Decode This</button>
+        <button class="anav" onclick="showPanel('heroes',this)">WC Heroes</button>
+        <button class="anav" onclick="showPanel('schedule',this)">Schedule</button>
+      </nav>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="admin-main">
+
+      <!-- DASHBOARD -->
+      <div class="apanel active" id="apanel-dashboard">
+        <div class="apanel-title">Dashboard</div>
+        <div class="apanel-sub">Today's content status</div>
+        <div class="dash-stats" id="dash-stats">
+          <div class="dash-stat"><div class="ds-v" id="ds-players">—</div><div class="ds-l">Players today</div></div>
+          <div class="dash-stat"><div class="ds-v" id="ds-scheduled">—</div><div class="ds-l">Days scheduled</div></div>
+          <div class="dash-stat"><div class="ds-v" id="ds-streak">—</div><div class="ds-l">Active streaks</div></div>
+          <div class="dash-stat"><div class="ds-v" id="ds-avg">—</div><div class="ds-l">Avg score today</div></div>
+        </div>
+        <div class="acard">
+          <div class="acard-title">Today's content status</div>
+          <table class="status-table">
+            <thead><tr><th>Game</th><th>Status</th><th>Summary</th><th></th></tr></thead>
+            <tbody id="content-status-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CROSSWORD -->
+      <div class="apanel" id="apanel-crossword">
+        <div class="apanel-title">Crossword builder</div>
+        <div class="apanel-sub">Enter answers (no spaces) and clues. The validator checks intersections and enforces all hard constraints.</div>
+
+        <div class="acard">
+          <div class="constraint-box">
+            <div class="constraint-title">Hard constraints (always enforced)</div>
+            <ul class="constraint-list">
+              <li>No two across words on adjacent rows (minimum 2-row gap)</li>
+              <li>No down word column overlaps an across word's span unless letters match at that cell</li>
+              <li>No across/down words connect end-to-end visually</li>
+              <li>All intersections verified — letters must match at every crossing</li>
+              <li>Every word must intersect at least one perpendicular word</li>
+              <li>Multi-word answers: store without spaces, use word lengths field for display (e.g. 5,5)</li>
+            </ul>
+          </div>
+
+          <div class="section-lbl">3 Across</div>
+          <div id="across-clues">
+            <div class="clue-block">
+              <div class="form-grid-3">
+                <div class="field"><label>1 Across — Answer <span class="req">*</span></label><input type="text" id="cw-a1" placeholder="e.g. MANDZUKIC" oninput="this.value=this.value.toUpperCase().replace(/\s/g,'');cwPreview()"></div>
+                <div class="field"><label>Word lengths</label><input type="text" id="cw-wl1" placeholder="e.g. 9 or 5,5" oninput="cwPreview()"><span class="hint">Leave blank = auto</span></div>
+                <div class="field align-end"><span class="wl-preview" id="cw-prev1"></span></div>
+              </div>
+              <div class="field"><label>1 Across — Clue</label><input type="text" id="cw-c1" placeholder="e.g. Goal-scorer in the 2018 WC Final"></div>
+            </div>
+            <div class="clue-block">
+              <div class="form-grid-3">
+                <div class="field"><label>2 Across — Answer <span class="req">*</span></label><input type="text" id="cw-a2" placeholder="e.g. JULESRIMET" oninput="this.value=this.value.toUpperCase().replace(/\s/g,'');cwPreview()"></div>
+                <div class="field"><label>Word lengths</label><input type="text" id="cw-wl2" placeholder="e.g. 5,5" oninput="cwPreview()"><span class="hint">Leave blank = auto</span></div>
+                <div class="field align-end"><span class="wl-preview" id="cw-prev2"></span></div>
+              </div>
+              <div class="field"><label>2 Across — Clue</label><input type="text" id="cw-c2" placeholder="e.g. Old FIFA WC Trophy named after him"></div>
+            </div>
+            <div class="clue-block">
+              <div class="form-grid-3">
+                <div class="field"><label>3 Across — Answer <span class="req">*</span></label><input type="text" id="cw-a3" placeholder="e.g. KLOSE" oninput="this.value=this.value.toUpperCase().replace(/\s/g,'');cwPreview()"></div>
+                <div class="field"><label>Word lengths</label><input type="text" id="cw-wl3" placeholder="e.g. 5" oninput="cwPreview()"><span class="hint">Leave blank = auto</span></div>
+                <div class="field align-end"><span class="wl-preview" id="cw-prev3"></span></div>
+              </div>
+              <div class="field"><label>3 Across — Clue</label><input type="text" id="cw-c3" placeholder="e.g. All-time WC top scorer"></div>
+            </div>
+          </div>
+
+          <div class="section-lbl">3 Down</div>
+          <div id="down-clues">
+            <div class="clue-block">
+              <div class="form-grid-3">
+                <div class="field"><label>4 Down — Answer <span class="req">*</span></label><input type="text" id="cw-a4" placeholder="e.g. METLIFE" oninput="this.value=this.value.toUpperCase().replace(/\s/g,'');cwPreview()"></div>
+                <div class="field"><label>Word lengths</label><input type="text" id="cw-wl4" placeholder="e.g. 7" oninput="cwPreview()"><span class="hint">Leave blank = auto</span></div>
+                <div class="field align-end"><span class="wl-preview" id="cw-prev4"></span></div>
+              </div>
+              <div class="field"><label>4 Down — Clue</label><input type="text" id="cw-c4" placeholder="e.g. Venue of 2026 WC Final"></div>
+            </div>
+            <div class="clue-block">
+              <div class="form-grid-3">
+                <div class="field"><label>5 Down — Answer <span class="req">*</span></label><input type="text" id="cw-a5" placeholder="e.g. RODRIGUEZ" oninput="this.value=this.value.toUpperCase().replace(/\s/g,'');cwPreview()"></div>
+                <div class="field"><label>Word lengths</label><input type="text" id="cw-wl5" placeholder="e.g. 9" oninput="cwPreview()"><span class="hint">Leave blank = auto</span></div>
+                <div class="field align-end"><span class="wl-preview" id="cw-prev5"></span></div>
+              </div>
+              <div class="field"><label>5 Down — Clue</label><input type="text" id="cw-c5" placeholder="e.g. 2014 Golden Boot winner"></div>
+            </div>
+            <div class="clue-block">
+              <div class="form-grid-3">
+                <div class="field"><label>6 Down — Answer <span class="req">*</span></label><input type="text" id="cw-a6" placeholder="e.g. MARACANA" oninput="this.value=this.value.toUpperCase().replace(/\s/g,'');cwPreview()"></div>
+                <div class="field"><label>Word lengths</label><input type="text" id="cw-wl6" placeholder="e.g. 8" oninput="cwPreview()"><span class="hint">Leave blank = auto</span></div>
+                <div class="field align-end"><span class="wl-preview" id="cw-prev6"></span></div>
+              </div>
+              <div class="field"><label>6 Down — Clue</label><input type="text" id="cw-c6" placeholder="e.g. Iconic stadium 2014 WC Final"></div>
+            </div>
+          </div>
+
+          <div class="validate-status" id="cw-status" style="display:none"></div>
+          <div class="btn-row">
+            <button class="btn-g" onclick="validateCW()">Validate &amp; generate grid</button>
+            <button class="btn-w" onclick="saveCW(true)">Save as draft</button>
+          </div>
+          <button class="btn-full" id="cw-save-btn" onclick="saveCW(false)" disabled>Save crossword</button>
+        </div>
+      </div>
+
+      <!-- QUIZ -->
+      <div class="apanel" id="apanel-quiz">
+        <div class="apanel-title">Quiz editor</div>
+        <div class="apanel-sub">5 questions per day. Select the radio button next to the correct answer.</div>
+        <div class="acard">
+          <div id="quiz-questions"></div>
+          <button class="btn-full" onclick="saveQuiz()">Save quiz</button>
+        </div>
+      </div>
+
+      <!-- PREDICTOR -->
+      <div class="apanel" id="apanel-predictor">
+        <div class="apanel-title">Super Predictor</div>
+        <div class="apanel-sub">Add matches and squads. Fill in actual result after the match to trigger scoring.</div>
+        <div id="matches-container"></div>
+        <button class="btn-w" onclick="addMatch()" style="margin-bottom:10px">+ Add another match</button>
+        <button class="btn-full" onclick="savePredictor()">Save fixtures</button>
+      </div>
+
+      <!-- DECODE THIS -->
+      <div class="apanel" id="apanel-decode">
+        <div class="apanel-title">Decode This</div>
+        <div class="apanel-sub">One football/WC riddle per day. List accepted answer variations so players aren't penalised for minor differences.</div>
+        <div class="acard">
+          <div class="field"><label>Riddle <span class="req">*</span></label><textarea id="decode-riddle" placeholder="e.g. I am worn by heroes, feared by rivals..."></textarea></div>
+          <div class="field"><label>Primary answer <span class="req">*</span></label><input type="text" id="decode-answer" placeholder="e.g. FIFA World Cup Trophy"></div>
+          <div class="field"><label>Accepted variations <span class="req">*</span> <span class="hint">(comma separated)</span></label><input type="text" id="decode-accepted" placeholder="e.g. trophy, world cup trophy, the trophy, fifa trophy"></div>
+          <div class="field"><label>Hint <span class="hint">(optional)</span></label><input type="text" id="decode-hint" placeholder="e.g. It is made of gold and sits on a plinth"></div>
+          <button class="btn-full" onclick="saveDecode()">Save riddle</button>
+        </div>
+      </div>
+
+      <!-- WC HEROES -->
+      <div class="apanel" id="apanel-heroes">
+        <div class="apanel-title">WC Heroes</div>
+        <div class="apanel-sub">Set today's mystery player. All 7 categories are revealed one per wrong guess.</div>
+        <div class="acard">
+          <div class="field">
+            <label>Search and select today's player <span class="req">*</span></label>
+            <input type="text" id="hero-search" placeholder="Type a player name..." oninput="heroAdminFilter()" autocomplete="off">
+            <div class="hero-dd" id="hero-dd"></div>
+          </div>
+          <div id="hero-selected-card" style="display:none" class="hero-selected">
+            <div class="hero-sel-name" id="hero-sel-name"></div>
+            <div class="hero-sel-data" id="hero-sel-data"></div>
+            <button class="btn-w" style="margin-top:8px" onclick="clearHeroSelection()">Change player</button>
+          </div>
+          <div class="section-lbl" style="margin-top:14px">Or add a new player to the database</div>
+          <div class="form-grid">
+            <div class="field"><label>Display name</label><input type="text" id="new-hero-name" placeholder="e.g. Ronaldo (R9)"></div>
+            <div class="field"><label>First name</label><input type="text" id="new-hero-fn" placeholder="e.g. Ronaldo Nazário"></div>
+            <div class="field"><label>Confederation</label>
+              <select id="new-hero-conf"><option>CONMEBOL</option><option>UEFA</option><option>CAF</option><option>AFC</option><option>CONCACAF</option><option>OFC</option></select>
+            </div>
+            <div class="field"><label>Country</label><input type="text" id="new-hero-country" placeholder="e.g. Brazil"></div>
+            <div class="field"><label>Position</label>
+              <select id="new-hero-pos"><option>Forward</option><option>Midfielder</option><option>Defender</option><option>Goalkeeper</option></select>
+            </div>
+            <div class="field"><label>Debut WC year</label><input type="number" id="new-hero-debut" placeholder="e.g. 1994" min="1930" max="2030"></div>
+            <div class="field"><label>WC editions</label><input type="number" id="new-hero-editions" placeholder="e.g. 4" min="1" max="6"></div>
+            <div class="field"><label>WC goals</label><input type="number" id="new-hero-goals" placeholder="e.g. 15" min="0"></div>
+            <div class="field"><label>WC Winner</label>
+              <select id="new-hero-winner"><option>Yes</option><option>No</option></select>
+            </div>
+            <div class="field"><label>Accepted name variations <span class="hint">(comma separated)</span></label>
+              <input type="text" id="new-hero-aliases" placeholder="e.g. ronaldo, r9, ronaldo nazario">
+            </div>
+          </div>
+          <button class="btn-w" onclick="addNewHero()">Add to database &amp; select</button>
+          <div style="margin-top:14px">
+            <button class="btn-full" id="hero-save-btn" onclick="saveHeroes()" disabled>Save WC Hero for this date</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCHEDULE -->
+      <div class="apanel" id="apanel-schedule">
+        <div class="apanel-title">Schedule</div>
+        <div class="apanel-sub">All upcoming and past daily content at a glance</div>
+        <div class="acard">
+          <table class="status-table" id="schedule-table">
+            <thead><tr><th>Date</th><th>Crossword</th><th>Quiz</th><th>Predictor</th><th>Decode</th><th>Heroes</th><th>Status</th></tr></thead>
+            <tbody id="schedule-tbody"><tr><td colspan="7" class="loading">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /admin-main -->
+  </div><!-- /admin-layout -->
+</div><!-- /admin-app -->
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/js/config.js"></script>
+<script src="/js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Extra Time — Daily Football Games</title>
+<meta name="description" content="Daily football crossword, quiz, predictor, riddles and WC Heroes. Play every day.">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<div class="hdr">
+  <div class="logo">Extra <span>Time</span></div>
+  <div class="hdr-r">
+    <div class="streak-pill" id="streak-pill" style="display:none">🔥 <span id="streak-val">0</span> day streak</div>
+    <button class="signin-btn" id="signin-btn" onclick="showAuth()">Sign in</button>
+    <div class="user-pill" id="user-pill" style="display:none">
+      <span id="user-name"></span>
+      <button onclick="signOut()" style="background:none;border:none;color:#a7f3d0;cursor:pointer;font-size:10px;margin-left:6px">Sign out</button>
+    </div>
+  </div>
+</div>
+
+<div class="tabs" id="tabs">
+  <button class="tab active" onclick="showTab('cw',this)">Crossword</button>
+  <button class="tab" onclick="showTab('quiz',this)">Quiz</button>
+  <button class="tab" onclick="showTab('pred',this)">Predictor</button>
+  <button class="tab" onclick="showTab('decode',this)">Decode This</button>
+  <button class="tab" onclick="showTab('heroes',this)">WC Heroes</button>
+  <button class="tab" onclick="showTab('lb',this)">Leaderboard</button>
+</div>
+
+<div class="sbar">
+  <div class="sp"><div class="sl">Total</div><div class="sv g" id="sc-total">0</div></div>
+  <div class="sp"><div class="sl">Quiz</div><div class="sv" id="sc-quiz">—</div></div>
+  <div class="sp"><div class="sl">Predictor</div><div class="sv" id="sc-pred">—</div></div>
+  <div class="sp"><div class="sl">Heroes</div><div class="sv" id="sc-heroes">—</div></div>
+  <div class="sp"><div class="sl">Assists</div><div class="sv" id="sc-assists">0</div></div>
+</div>
+
+<!-- CROSSWORD -->
+<div class="pane active" id="pane-cw">
+  <p class="gtitle">Daily Football Crossword</p>
+  <div class="stat-row" id="cw-stats"></div>
+  <div class="active-bar" id="active-bar">Click a clue or cell to begin</div>
+  <div class="cw-scroll"><div class="cw-grid" id="cw-grid"></div></div>
+  <div class="clue-cols" id="clue-cols"></div>
+  <div class="btn-row">
+    <button class="btn-g" onclick="checkCW()">Check answers</button>
+    <button class="btn-w" onclick="revealCW()">Reveal all</button>
+    <button class="btn-w" onclick="clearCW()">Clear</button>
+  </div>
+  <div class="fb" id="cw-fb"></div>
+</div>
+
+<!-- QUIZ -->
+<div class="pane" id="pane-quiz">
+  <p class="gtitle">Daily Quiz</p>
+  <p class="gsub">5 questions · 10 pts each · Earn Assists on correct answers</p>
+  <div class="assist-bar">
+    <div class="assist-info">
+      <div class="assist-count">🎯 <span id="assist-count">0</span> Assists</div>
+      <div class="assist-label">Use an Assist to eliminate a wrong option (costs 5 pts)</div>
+    </div>
+    <button class="assist-btn" id="assist-btn" onclick="useAssist()" disabled>Use Assist</button>
+  </div>
+  <div id="quiz-play">
+    <div class="card">
+      <div class="q-meta">Question <span id="q-num">1</span> of 5</div>
+      <div class="prog-track"><div class="prog-fill" id="q-prog" style="width:20%"></div></div>
+      <span class="diff-badge easy" id="q-diff">Easy</span>
+      <div class="assist-used-note" id="assist-used-note" style="display:none">⚡ Assist used — no Assist earned for this question</div>
+      <div class="q-text" id="q-text">Loading...</div>
+      <div class="opts" id="q-opts"></div>
+    </div>
+    <div class="q-feedback" id="q-feedback" style="display:none"></div>
+    <button class="btn-full" id="q-next" style="display:none" onclick="nextQ()">Next question →</button>
+  </div>
+  <div id="quiz-done" style="display:none;text-align:center;padding:24px 0">
+    <div class="quiz-score" id="quiz-score">0 pts</div>
+    <div class="quiz-score-sub" id="quiz-score-sub">Quiz complete!</div>
+    <button class="btn-w" style="margin-top:10px" onclick="shareScore('quiz')">Share score</button>
+  </div>
+</div>
+
+<!-- SUPER PREDICTOR -->
+<div class="pane" id="pane-pred">
+  <p class="gtitle">Super Predictor</p>
+  <div class="scoring-note">
+    Exact scoreline = 5 pts · Correct outcome = 3 pts · Correct goal diff = 3 pts<br>
+    Goalscorer: Forward = 2 pts · Midfielder = 3 pts · Defender = 4 pts
+  </div>
+  <div id="matches-container">Loading matches...</div>
+  <div class="fb" id="pred-fb"></div>
+</div>
+
+<!-- DECODE THIS -->
+<div class="pane" id="pane-decode">
+  <p class="gtitle">Decode This</p>
+  <div class="stat-row" id="decode-stats"></div>
+  <div class="card">
+    <div class="riddle-text" id="riddle-text">Loading...</div>
+    <input class="text-input" type="text" placeholder="Type your answer..." id="decode-ans">
+    <button class="btn-g" onclick="checkDecode()">Submit answer</button>
+    <div class="fb" id="decode-fb"></div>
+  </div>
+</div>
+
+<!-- WC HEROES -->
+<div class="pane" id="pane-heroes">
+  <p class="gtitle">WC Heroes</p>
+  <div class="legend-key">
+    <div class="lk"><div class="lk-dot ok-dot"></div>Correct</div>
+    <div class="lk"><div class="lk-dot close-dot"></div>Close (±2)</div>
+    <div class="lk"><div class="lk-dot no-dot"></div>Wrong</div>
+  </div>
+  <div class="table-wrap">
+    <table class="guess-table" id="guess-table">
+      <thead><tr id="guess-header"></tr></thead>
+      <tbody id="guess-body"></tbody>
+    </table>
+  </div>
+  <div class="guess-count" id="guess-count"></div>
+  <div class="inp-row">
+    <input class="legend-inp" type="text" placeholder="Search by name or first name..." id="legend-inp" autocomplete="off" spellcheck="false">
+    <button class="btn-g" id="heroes-submit" disabled onclick="submitHeroGuess()">Submit</button>
+  </div>
+  <div class="legend-dd" id="legend-dd"></div>
+  <div class="fb" id="heroes-fb"></div>
+</div>
+
+<!-- LEADERBOARD -->
+<div class="pane" id="pane-lb">
+  <p class="gtitle">Leaderboard</p>
+  <p class="gsub">Sign in to appear and track your all-time rank</p>
+  <div class="lb-toggle">
+    <button class="lb-btn active" id="tog-today" onclick="toggleLB('today')">Today</button>
+    <button class="lb-btn" id="tog-alltime" onclick="toggleLB('alltime')">All-time</button>
+  </div>
+  <div id="lb-today"><div class="card" id="lb-today-card"><p class="loading">Loading...</p></div><button class="btn-full" onclick="showAuth()">Sign in to join leaderboard</button></div>
+  <div id="lb-alltime" style="display:none"><div class="card" id="lb-alltime-card"><p class="loading">Loading...</p></div><button class="btn-full" onclick="showAuth()">Sign in to join leaderboard</button></div>
+  <div class="divider"></div>
+  <p class="section-label">Your badges</p>
+  <div class="badge-row" id="badge-row">
+    <div class="badge">🔥 Streak master</div>
+    <div class="badge">⭐ First solve</div>
+    <div class="badge">🎯 Assist master</div>
+    <div class="badge" style="opacity:.4">? Locked</div>
+  </div>
+</div>
+
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="auth-modal" style="display:none" onclick="if(event.target===this)hideAuth()">
+  <div class="modal">
+    <h2>Sign in to Extra Time</h2>
+    <p class="modal-sub">Save your scores, appear on the leaderboard, and track your streaks across devices.</p>
+    <div class="field"><label>Email</label><input type="email" id="auth-email" placeholder="you@example.com"></div>
+    <div class="field"><label>Username (new users)</label><input type="text" id="auth-username" placeholder="Choose a display name"></div>
+    <button class="btn-full" onclick="signIn()">Send magic link</button>
+    <div class="fb" id="auth-fb"></div>
+    <button class="modal-close" onclick="hideAuth()">✕</button>
+  </div>
+</div>
+
+<!-- SHARE CARD -->
+<div class="modal-overlay" id="share-modal" style="display:none" onclick="if(event.target===this)hideShare()">
+  <div class="modal">
+    <div class="share-card" id="share-card">
+      <div class="share-logo">Extra Time</div>
+      <div class="share-date" id="share-date"></div>
+      <div class="share-scores" id="share-scores"></div>
+      <div class="share-url">extratime.vercel.app</div>
+    </div>
+    <button class="btn-full" onclick="copyShareCard()" style="margin-top:10px">Copy to clipboard</button>
+    <button class="modal-close" onclick="hideShare()">✕</button>
+  </div>
+</div>
+
+<input id="hidden-inp" style="position:fixed;left:-9999px;top:0;opacity:0;width:1px;height:1px" autocomplete="off" spellcheck="false">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/js/config.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/crossword.js"></script>
+<script src="/js/quiz.js"></script>
+<script src="/js/predictor.js"></script>
+<script src="/js/decode.js"></script>
+<script src="/js/heroes.js"></script>
+<script src="/js/leaderboard.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
