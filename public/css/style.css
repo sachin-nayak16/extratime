@@ -212,3 +212,9 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
   .scorer-cols{grid-template-columns:1fr}
   .stat-row{grid-template-columns:repeat(2,1fr)}
 }
+
+/* COMING SOON BANNER */
+.coming-soon-banner{display:flex;align-items:flex-start;gap:10px;background:#fffbeb;border:0.5px solid #fde68a;border-radius:var(--radius);padding:11px 13px;margin-bottom:12px}
+.csb-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+.csb-title{font-size:12px;font-weight:600;color:#92400e;margin-bottom:2px}
+.csb-sub{font-size:11px;color:#b45309;line-height:1.5}
