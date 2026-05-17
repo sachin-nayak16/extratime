@@ -71,7 +71,11 @@
       <span class="diff-badge easy" id="q-diff">Easy</span>
       <div class="assist-used-note" id="assist-used-note" style="display:none">⚡ Assist used — no Assist earned for this question</div>
       <div class="q-text" id="q-text">Loading...</div>
-      <div class="opts" id="q-opts"></div>
+      <div id="q-hint-row" style="display:none;background:#fef9c3;border:0.5px solid #ca8a04;border-radius:var(--radius);padding:8px 11px;margin-bottom:9px;font-size:11px;color:#713f12">
+        💡 Hint: <span id="q-hint-text"></span>
+      </div>
+      <input class="text-input" type="text" id="q-answer-inp" placeholder="Type your answer..." onkeydown="if(event.key==='Enter')submitAnswer()" autocomplete="off" spellcheck="false">
+      <button class="btn-g" id="q-submit-btn" onclick="submitAnswer()">Submit answer</button>
     </div>
     <div class="q-feedback" id="q-feedback" style="display:none"></div>
     <button class="btn-full" id="q-next" style="display:none" onclick="nextQ()">Next question →</button>
