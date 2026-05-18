@@ -114,3 +114,9 @@
   .form-grid-3{grid-template-columns:1fr 1fr}
   .dash-stats{grid-template-columns:1fr 1fr}
 }
+
+/* CSV IMPORT */
+.csv-import-box{background:#f0fdf4;border:0.5px solid #bbf7d0;border-radius:var(--radius);padding:12px;margin-bottom:12px}
+.csv-title{font-size:12px;font-weight:600;color:#065f46;margin-bottom:3px}
+.csv-sub{font-size:11px;color:#047857}
+.csv-sub code{background:#d1fae5;padding:1px 5px;border-radius:3px;font-size:10px}
