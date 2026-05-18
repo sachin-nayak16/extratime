@@ -262,8 +262,8 @@ async function saveCW(asDraft = false) {
     };
   }
 
-  await upsertContent({ crossword });
-  showToast(asDraft ? 'Draft saved!' : 'Crossword saved!');
+  const ok = await upsertContent({ crossword });
+  if (ok) showToast(asDraft ? '✅ Draft saved!' : '✅ Crossword saved!');
   updateContentStatus();
 }
 
@@ -330,8 +330,8 @@ async function saveQuiz() {
       explanation: document.getElementById(`q-exp-${i}`)?.value?.trim() || '',
     });
   }
-  await upsertContent({ quiz_questions: questions });
-  showToast('Quiz saved!');
+  const ok = await upsertContent({ quiz_questions: questions });
+  if (ok) showToast('✅ Quiz saved!');
   updateContentStatus();
 }
 
@@ -491,8 +491,8 @@ async function savePredictor() {
     });
   }
   if (!matches.length) { showToast('Please add at least one match.'); return; }
-  await upsertContent({ matches });
-  showToast('Fixtures saved!');
+  const ok = await upsertContent({ matches });
+  if (ok) showToast('✅ Fixtures saved!');
   updateContentStatus();
 }
 
@@ -503,8 +503,8 @@ async function saveDecode() {
   const accepted = document.getElementById('decode-accepted')?.value?.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
   const hint = document.getElementById('decode-hint')?.value?.trim() || '';
   if (!riddle || !answer || !accepted?.length) { showToast('Please fill in the riddle, answer, and accepted variations.'); return; }
-  await upsertContent({ riddle: { riddle, answer, accepted, hint } });
-  showToast('Riddle saved!');
+  const ok = await upsertContent({ riddle: { riddle, answer, accepted, hint } });
+  if (ok) showToast('✅ Riddle saved!');
   updateContentStatus();
 }
 
@@ -577,8 +577,8 @@ function addNewHero() {
 
 async function saveHeroes() {
   if (!heroSelectedPlayer) { showToast('Please select a player first.'); return; }
-  await upsertContent({ wc_hero: heroSelectedPlayer });
-  showToast('WC Hero saved!');
+  const ok = await upsertContent({ wc_hero: heroSelectedPlayer });
+  if (ok) showToast('✅ WC Hero saved!');
   updateContentStatus();
 }
 
@@ -586,15 +586,30 @@ async function saveHeroes() {
 async function upsertContent(updates) {
   setSaveStatus('Saving...');
   try {
-    const { data: existing } = await sb.from('daily_content').select('*').eq('date', currentDate).single();
+    // First try to get existing row
+    const { data: existing } = await sb
+      .from('daily_content')
+      .select('*')
+      .eq('date', currentDate)
+      .maybeSingle();
+
     const payload = { ...(existing || {}), ...updates, date: currentDate };
-    const { error } = await sb.from('daily_content').upsert(payload, { onConflict: 'date' });
+    delete payload.id; // remove id if present so upsert works cleanly
+
+    const { error } = await sb
+      .from('daily_content')
+      .upsert(payload, { onConflict: 'date' });
+
     if (error) throw error;
+
     setSaveStatus('Saved ✓');
     setTimeout(() => setSaveStatus(''), 3000);
+    return true;
   } catch (e) {
     setSaveStatus('Save failed');
-    showToast('Error saving: ' + e.message);
+    console.error('Save error:', e);
+    showToast('❌ Save failed: ' + (e.message || 'Check Supabase RLS policies'));
+    return false;
   }
 }
 
