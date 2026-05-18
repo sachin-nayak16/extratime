@@ -358,33 +358,87 @@ function addMatch() {
       <div class="field"><label>Competition</label><input type="text" id="m${n}-comp" placeholder="e.g. FA Cup Final"></div>
       <div class="field"><label>Venue</label><input type="text" id="m${n}-venue" placeholder="e.g. Wembley"></div>
     </div>
-    <div class="section-lbl">Home squad (goalscorer options)</div>
-    <div class="player-list" id="m${n}-home-players">
-      <div class="player-item">
-        <input type="text" placeholder="Player name e.g. Haaland">
-        <select><option value="Forward">F</option><option value="Midfielder">M</option><option value="Defender">D</option><option value="Goalkeeper">GK</option></select>
-        <button onclick="this.parentElement.remove()">×</button>
+
+    <div class="csv-import-box">
+      <div class="csv-title">📋 Paste squad CSV (fastest way)</div>
+      <div class="csv-sub">Format: one player per line — <code>Name, Position</code> e.g. <code>Haaland, Forward</code></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+        <div>
+          <div class="field" style="margin-bottom:4px"><label>Home squad CSV</label>
+            <textarea id="m${n}-home-csv" placeholder="Haaland, Forward&#10;De Bruyne, Midfielder&#10;Dias, Defender&#10;Ederson, Goalkeeper" rows="5" style="font-size:11px;font-family:monospace"></textarea>
+          </div>
+          <button class="add-player-btn" onclick="importCSV(${n},'home')">Import home squad</button>
+        </div>
+        <div>
+          <div class="field" style="margin-bottom:4px"><label>Away squad CSV</label>
+            <textarea id="m${n}-away-csv" placeholder="Palmer, Midfielder&#10;Jackson, Forward&#10;Colwill, Defender&#10;Sanchez, Goalkeeper" rows="5" style="font-size:11px;font-family:monospace"></textarea>
+          </div>
+          <button class="add-player-btn" onclick="importCSV(${n},'away')">Import away squad</button>
+        </div>
       </div>
     </div>
+
+    <div class="section-lbl">Home squad <span class="hint">(or add manually below)</span></div>
+    <div class="player-list" id="m${n}-home-players"></div>
     <button class="add-player-btn" onclick="addPlayer('m${n}-home-players')">+ Add home player</button>
-    <div class="section-lbl">Away squad (goalscorer options)</div>
-    <div class="player-list" id="m${n}-away-players">
-      <div class="player-item">
-        <input type="text" placeholder="Player name e.g. Palmer">
-        <select><option value="Forward">F</option><option value="Midfielder">M</option><option value="Defender">D</option><option value="Goalkeeper">GK</option></select>
-        <button onclick="this.parentElement.remove()">×</button>
-      </div>
-    </div>
+
+    <div class="section-lbl">Away squad</div>
+    <div class="player-list" id="m${n}-away-players"></div>
     <button class="add-player-btn" onclick="addPlayer('m${n}-away-players')">+ Add away player</button>
-    <div class="section-lbl">Actual result <span class="hint">(fill after match)</span></div>
+
+    <div class="section-lbl">Actual result <span class="hint">(fill after match to trigger scoring)</span></div>
     <div class="result-row">
-      <input class="result-inp" type="number" id="m${n}-home-result" min="0" max="20" placeholder="0">
+      <input class="result-inp" type="number" id="m${n}-home-result" min="0" max="20" placeholder="—">
       <span class="result-dash">—</span>
-      <input class="result-inp" type="number" id="m${n}-away-result" min="0" max="20" placeholder="0">
+      <input class="result-inp" type="number" id="m${n}-away-result" min="0" max="20" placeholder="—">
+    </div>
+    <div class="section-lbl">Actual goalscorers <span class="hint">(comma separated, for scoring)</span></div>
+    <div class="form-grid">
+      <div class="field"><input type="text" id="m${n}-home-scorers" placeholder="e.g. Haaland, Foden"></div>
+      <div class="field"><input type="text" id="m${n}-away-scorers" placeholder="e.g. Palmer, Jackson"></div>
     </div>
   `;
   container.appendChild(div);
   matchCount++;
+}
+
+function importCSV(n, side) {
+  const csvId = `m${n}-${side}-csv`;
+  const listId = `m${n}-${side}-players`;
+  const raw = document.getElementById(csvId)?.value?.trim();
+  if (!raw) { showToast('Paste some CSV first.'); return; }
+
+  const list = document.getElementById(listId);
+  list.innerHTML = ''; // clear existing
+
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  let added = 0;
+  lines.forEach(line => {
+    const parts = line.split(',').map(s => s.trim());
+    const name = parts[0];
+    const posRaw = (parts[1] || '').toLowerCase();
+    let position = 'Forward';
+    if (posRaw.includes('mid')) position = 'Midfielder';
+    else if (posRaw.includes('def')) position = 'Defender';
+    else if (posRaw.includes('goal') || posRaw.includes('gk')) position = 'Goalkeeper';
+    else if (posRaw.includes('fwd') || posRaw.includes('for')) position = 'Forward';
+    if (!name) return;
+    const div = document.createElement('div');
+    div.className = 'player-item';
+    div.innerHTML = `
+      <input type="text" value="${name}">
+      <select>
+        <option value="Forward" ${position==='Forward'?'selected':''}>FWD</option>
+        <option value="Midfielder" ${position==='Midfielder'?'selected':''}>MID</option>
+        <option value="Defender" ${position==='Defender'?'selected':''}>DEF</option>
+        <option value="Goalkeeper" ${position==='Goalkeeper'?'selected':''}>GK</option>
+      </select>
+      <button onclick="this.parentElement.remove()">×</button>
+    `;
+    list.appendChild(div);
+    added++;
+  });
+  showToast(`${added} players imported!`);
 }
 
 function addPlayer(containerId) {
@@ -393,7 +447,12 @@ function addPlayer(containerId) {
   div.className = 'player-item';
   div.innerHTML = `
     <input type="text" placeholder="Player name">
-    <select><option value="Forward">F</option><option value="Midfielder">M</option><option value="Defender">D</option><option value="Goalkeeper">GK</option></select>
+    <select>
+      <option value="Forward">FWD</option>
+      <option value="Midfielder">MID</option>
+      <option value="Defender">DEF</option>
+      <option value="Goalkeeper">GK</option>
+    </select>
     <button onclick="this.parentElement.remove()">×</button>
   `;
   c.appendChild(div);
@@ -425,8 +484,10 @@ async function savePredictor() {
       venue: document.getElementById(`m${n}-venue`)?.value?.trim() || '',
       home_squad: getPlayers(`m${n}-home-players`),
       away_squad: getPlayers(`m${n}-away-players`),
-      home_result: parseInt(document.getElementById(`m${n}-home-result`)?.value) || null,
-      away_result: parseInt(document.getElementById(`m${n}-away-result`)?.value) || null,
+      home_result: parseInt(document.getElementById(`m${n}-home-result`)?.value) ?? null,
+      away_result: parseInt(document.getElementById(`m${n}-away-result`)?.value) ?? null,
+      home_actual_scorers: (document.getElementById(`m${n}-home-scorers`)?.value||'').split(',').map(s=>s.trim()).filter(Boolean),
+      away_actual_scorers: (document.getElementById(`m${n}-away-scorers`)?.value||'').split(',').map(s=>s.trim()).filter(Boolean),
     });
   }
   if (!matches.length) { showToast('Please add at least one match.'); return; }
