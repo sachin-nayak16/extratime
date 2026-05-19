@@ -112,15 +112,17 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 .quiz-score-sub{font-size:12px;color:var(--text-2);margin-top:4px}
 
 /* PREDICTOR */
-.scoring-note{font-size:11px;color:var(--text-2);background:var(--bg-3);border-radius:var(--radius);padding:7px 10px;margin-bottom:11px;line-height:1.6}
+.scoring-note{font-size:13px;color:var(--text-2);background:var(--bg-3);border-radius:var(--radius);padding:9px 12px;margin-bottom:11px;line-height:1.7}
+.scorer-note{font-size:12px;color:#065f46;background:#ecfdf5;border:0.5px solid #6ee7b7;border-radius:var(--radius);padding:7px 11px;margin:8px 0;font-weight:500}
 .match-card{background:var(--bg-2);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:13px;margin-bottom:11px}
 .match-time{font-size:10px;color:var(--text-3);margin-bottom:6px}
 .match-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .team-name{font-size:13px;font-weight:600;color:var(--text)}
 .vs-badge{font-size:10px;color:var(--text-3);padding:2px 8px;background:var(--bg-3);border-radius:99px}
-.score-inputs{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:10px}
-.score-inp{width:56px;height:56px;font-size:22px;font-weight:700;text-align:center;border:0.5px solid var(--border-2);border-radius:var(--radius);background:var(--bg-3);color:var(--text);font-family:inherit}
-.score-dash{font-size:17px;color:var(--text-3)}
+.score-inputs{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:12px}
+.score-inp{width:64px;height:64px;font-size:26px;font-weight:700;text-align:center;border:1.5px solid var(--border-2);border-radius:var(--radius);background:var(--bg-3);color:var(--text);font-family:inherit;-moz-appearance:textfield}
+.score-inp::-webkit-outer-spin-button,.score-inp::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.score-dash{font-size:22px;color:var(--text-3);font-weight:300}
 .scorer-section{border-top:0.5px solid var(--border);padding-top:9px;margin-top:4px}
 .scorer-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:6px}
 .scorer-cols{display:grid;grid-template-columns:1fr 1fr;gap:9px}
