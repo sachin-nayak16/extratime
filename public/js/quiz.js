@@ -1,7 +1,4 @@
 // ─── QUIZ ──────────────────────────────────────────────────
-// Free-text answers. Assist reveals a hint for the current question.
-// Correct without Assist → earn 1 Assist token.
-// Using an Assist costs 5 pts and no Assist is earned even if correct.
 
 const SAMPLE_QUESTIONS = [
   { question:"Which country has won the most FIFA World Cup titles?", answer:"Brazil", accepted:["brazil"], hint:"They wear yellow and have won it 5 times", difficulty:"easy", explanation:"Brazil have won 5 World Cups — 1958, 1962, 1970, 1994 and 2002." },
@@ -17,30 +14,55 @@ async function initQuiz() {
   const state = getState();
   qAssists = state.assists || 0;
   updateAssistDisplay();
-  if (state.quiz_done) { showQuizDone(state.score_quiz || 0); return; }
+
+  // Restore in-progress quiz state
+  if (state.quiz_done) {
+    showQuizDone(state.score_quiz || 0);
+    return;
+  }
+  if (state.quiz_idx !== undefined) {
+    qIdx = state.quiz_idx;
+    qScore = state.quiz_score_so_far || 0;
+  }
+
+  // Load questions from Supabase
   try {
     const { data } = await sb.from('daily_content').select('quiz_questions').eq('date', CONFIG.today).maybeSingle();
     qData = data?.quiz_questions?.length ? data.quiz_questions : SAMPLE_QUESTIONS;
   } catch { qData = SAMPLE_QUESTIONS; }
+
   renderQuestion();
 }
 
 function renderQuestion() {
   if (qIdx >= qData.length) { finishQuiz(); return; }
   const q = qData[qIdx];
+  const isLast = qIdx === qData.length - 1;
+
   document.getElementById('q-num').textContent = qIdx + 1;
   document.getElementById('q-prog').style.width = ((qIdx+1)/qData.length*100) + '%';
   document.getElementById('q-diff').textContent = q.difficulty[0].toUpperCase()+q.difficulty.slice(1);
   document.getElementById('q-diff').className = 'diff-badge '+q.difficulty;
   document.getElementById('q-text').textContent = q.question;
   document.getElementById('assist-used-note').style.display = 'none';
-  const hr = document.getElementById('q-hint-row'); if (hr) hr.style.display = 'none';
+
+  const hr = document.getElementById('q-hint-row');
+  if (hr) hr.style.display = 'none';
+
   const inp = document.getElementById('q-answer-inp');
-  if (inp) { inp.value=''; inp.disabled=false; inp.focus(); }
+  if (inp) { inp.value=''; inp.disabled=false; setTimeout(()=>inp.focus(),100); }
+
   const sb2 = document.getElementById('q-submit-btn');
-  if (sb2) { sb2.disabled=false; sb2.textContent='Submit answer'; }
+  if (sb2) sb2.disabled=false;
+
+  // Update next button label
+  const nextBtn = document.getElementById('q-next');
+  if (nextBtn) {
+    nextBtn.textContent = isLast ? 'See my results →' : 'Next question →';
+    nextBtn.style.display = 'none';
+  }
+
   document.getElementById('q-feedback').style.display = 'none';
-  document.getElementById('q-next').style.display = 'none';
   qAssistUsed=false; qAnswered=false;
   updateAssistDisplay();
 }
@@ -72,26 +94,39 @@ function submitAnswer() {
   if (!userAns) { inp?.focus(); return; }
   qAnswered=true; inp.disabled=true;
   document.getElementById('q-submit-btn').disabled=true;
+
   const q = qData[qIdx];
   const accepted = (q.accepted||[q.answer.toLowerCase()]).map(a=>a.toLowerCase());
   const correct = accepted.some(a => userAns===a || userAns.includes(a) || a.includes(userAns));
+
   if (correct) { qScore += SCORING.quiz.perQuestion; if (!qAssistUsed) qAssists++; }
+
   const fb = document.getElementById('q-feedback');
   fb.className = 'q-feedback '+(correct?'ok':'bad');
   fb.innerHTML = correct
     ? `✓ Correct! ${qAssistUsed?'No Assist earned (Assist was used).':'Assist earned! 🎯'}<br><small>${q.explanation}</small>`
     : `✗ Not quite. The answer is <strong>${q.answer}</strong>.<br><small>${q.explanation}</small>`;
   fb.style.display='block';
-  document.getElementById('q-next').style.display='block';
+
+  const isLast = qIdx === qData.length - 1;
+  const nextBtn = document.getElementById('q-next');
+  nextBtn.textContent = isLast ? 'See my results →' : 'Next question →';
+  nextBtn.style.display='block';
+
   document.getElementById('sc-quiz').textContent = qScore+'pts';
   updateAssistDisplay(); updateScoreDisplay();
-  saveState({ assists: qAssists });
+  // Save progress so refresh restores state
+  saveState({ assists:qAssists, quiz_idx:qIdx, quiz_score_so_far:qScore });
 }
 
-function nextQ() { qIdx++; if (qIdx>=qData.length) finishQuiz(); else renderQuestion(); }
+function nextQ() {
+  qIdx++;
+  if (qIdx>=qData.length) finishQuiz();
+  else renderQuestion();
+}
 
 function finishQuiz() {
-  saveState({ quiz_done:true, score_quiz:qScore, assists:qAssists });
+  saveState({ quiz_done:true, score_quiz:qScore, assists:qAssists, quiz_idx:qIdx });
   saveScoreToDb('quiz', qScore);
   updateScoreDisplay();
   showQuizDone(qScore);

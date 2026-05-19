@@ -30,16 +30,31 @@ let predMatches = [];
 let predSelections = {};
 let countdownTimers = [];
 
-async function initPredictor() {
+async function initPredictor(todayContent, yesterdayContent) {
   const state = getState();
+  const yesterdayState = (() => {
+    try {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const key = `et_state_${yesterday.toISOString().split('T')[0]}`;
+      return JSON.parse(localStorage.getItem(key)) || {};
+    } catch { return {}; }
+  })();
 
-  // Load matches from Supabase
+  // Load today's matches
   try {
-    const { data } = await sb.from('daily_content').select('matches').eq('date', CONFIG.today).maybeSingle();
-    predMatches = data?.matches?.length ? data.matches : SAMPLE_MATCHES;
+    predMatches = todayContent?.matches?.length ? todayContent.matches : SAMPLE_MATCHES;
   } catch { predMatches = SAMPLE_MATCHES; }
 
-  // Check if results are in — show result popup if predictions were locked
+  // Show yesterday's results if predictions were locked yesterday and results are in
+  if (yesterdayState.pred_locked && !yesterdayState.pred_result_shown) {
+    const yesterdayMatches = yesterdayContent?.matches || [];
+    if (yesterdayMatches.length) {
+      checkAndShowResultsForMatches(yesterdayState, yesterdayMatches, true);
+    }
+  }
+
+  // Check today's results
   if (state.pred_locked && !state.pred_result_shown) {
     checkAndShowResults(state);
   }
@@ -291,42 +306,41 @@ function renderLockedPredictor(state) {
 }
 
 // ── RESULT POPUP ──────────────────────────────────────────
-// Called when user returns after results are in
 function checkAndShowResults(state) {
+  checkAndShowResultsForMatches(state, predMatches, false);
+}
+
+function checkAndShowResultsForMatches(state, matches, isYesterday) {
   const preds = state.pred_data || [];
   let totalPts = 0;
   const messages = [];
 
   preds.forEach(p => {
-    const m = predMatches.find(m => m.id === p.matchId);
+    const m = matches.find(m => m.id === p.matchId);
     if (!m || m.home_result === null || m.away_result === null) return;
 
     const hr = m.home_result, ar = m.away_result;
     const ph = p.home, pa = p.away;
 
-    // Exact scoreline
     if (ph === hr && pa === ar) {
       totalPts += SCORING.predictor.exactScore;
       messages.push(`⚽ Exact score! ${m.home_team} ${hr}–${ar} ${m.away_team} → +${SCORING.predictor.exactScore} pts`);
     } else {
-      // Correct outcome
       const actualOutcome = hr > ar ? 'H' : ar > hr ? 'A' : 'D';
       const predOutcome   = ph > pa ? 'H' : pa > ph ? 'A' : 'D';
       if (actualOutcome === predOutcome) {
         totalPts += SCORING.predictor.correctOutcome;
         messages.push(`✓ Correct outcome → +${SCORING.predictor.correctOutcome} pts`);
       }
-      // Correct goal diff
       if (Math.abs(hr-ar) === Math.abs(ph-pa) && !(ph===hr&&pa===ar)) {
         totalPts += SCORING.predictor.correctGoalDiff;
         messages.push(`✓ Correct goal difference → +${SCORING.predictor.correctGoalDiff} pts`);
       }
     }
 
-    // Scorers
     p.scorers?.forEach(s => {
       const allScorers = [...(m.home_actual_scorers||[]), ...(m.away_actual_scorers||[])];
-      if (allScorers.includes(s.name)) {
+      if (allScorers.map(n=>n.toLowerCase()).includes(s.name.toLowerCase())) {
         const pts = POS_PTS[s.position] || 2;
         totalPts += pts;
         messages.push(`🎯 ${s.name} scored! (${POS_LABEL[s.position]}) → +${pts} pts`);
@@ -336,24 +350,34 @@ function checkAndShowResults(state) {
 
   if (!messages.length) return;
 
-  // Save score and mark as shown
-  saveState({ score_pred: totalPts, pred_result_shown: true });
-  document.getElementById('sc-pred').textContent = totalPts + 'pts';
-  updateScoreDisplay();
-  saveScoreToDb('predictor', totalPts);
+  if (isYesterday) {
+    // Save yesterday's score to today's state
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const key = `et_state_${yesterday.toISOString().split('T')[0]}`;
+    try {
+      const s = JSON.parse(localStorage.getItem(key)) || {};
+      s.pred_result_shown = true;
+      s.score_pred = totalPts;
+      localStorage.setItem(key, JSON.stringify(s));
+    } catch {}
+    messages.unshift(`📅 Yesterday's Super Predictor results:`);
+  } else {
+    saveState({ score_pred: totalPts, pred_result_shown: true });
+    document.getElementById('sc-pred').textContent = totalPts + 'pts';
+    updateScoreDisplay();
+    saveScoreToDb('predictor', totalPts);
+  }
 
-  // Show popup
-  showResultPopup(totalPts, messages);
+  showResultPopup(totalPts, messages, isYesterday);
 }
 
-function showResultPopup(pts, messages) {
-  // Remove existing popup
+function showResultPopup(pts, messages, isYesterday=false) {
   const existing = document.getElementById('pred-result-popup');
   if (existing) existing.remove();
-
-  const emoji = pts >= 10 ? '🏆' : pts >= 5 ? '⚽' : '😬';
-  const headline = pts >= 10 ? 'Great predictions!' : pts >= 5 ? 'Not bad!' : pts > 0 ? 'A few points!' : 'Better luck next time!';
-
+  const emoji = pts >= 10 ? '🏆' : pts >= 5 ? '⚽' : pts > 0 ? '😬' : '💪';
+  const headline = isYesterday ? "Yesterday's results are in!" :
+    pts >= 10 ? 'Great predictions!' : pts >= 5 ? 'Not bad!' : pts > 0 ? 'A few points!' : 'Better luck next time!';
   const popup = document.createElement('div');
   popup.id = 'pred-result-popup';
   popup.className = 'result-popup-overlay';
