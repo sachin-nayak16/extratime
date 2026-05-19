@@ -30,23 +30,45 @@ const CW_ROWS=14, CW_COLS=13, CW_SZ=30;
 const CW_CELLS={}, CW_VALS={};
 let cwDir='A', cwNum=2, cwFocus=null;
 
-function initCrossword() {
-  // Restore state
+function initCrossword(todayContent) {
   const state = getState();
   buildCWStats(state);
-  buildCWGrid();
+  buildCWGrid(); // builds cells first
   buildCWClues();
-  if (state.cw_vals) {
+
+  // Restore typed letters AFTER grid is built
+  if (state.cw_vals && !state.cw_solved) {
     Object.entries(state.cw_vals).forEach(([k,v]) => {
       if (CW_CELLS[k] && v) {
         CW_VALS[k] = v;
-        document.getElementById(`cw-ltr-${k}`).textContent = v;
+        const el = document.getElementById(`cw-ltr-${k}`);
+        if (el) el.textContent = v;
       }
     });
   }
+
+  // Restore solved state
   if (state.cw_solved) {
-    Object.values(CW_CELLS).forEach(el => el.classList.add('ok'));
-    showCWFb('ok', '🏆 Solved! Counted in your win streak.');
+    // Fill in correct letters
+    Object.entries(CW_DATA.across).forEach(([,{r,cs,ans}]) =>
+      cs.forEach((c,i) => {
+        const k=`${r},${c}`;
+        CW_VALS[k]=ans[i];
+        const el=document.getElementById(`cw-ltr-${k}`);
+        if(el) el.textContent=ans[i];
+        CW_CELLS[k]?.classList.add('ok');
+      })
+    );
+    Object.entries(CW_DATA.down).forEach(([,{c,rs,ans}]) =>
+      rs.forEach((r,i) => {
+        const k=`${r},${c}`;
+        CW_VALS[k]=ans[i];
+        const el=document.getElementById(`cw-ltr-${k}`);
+        if(el) el.textContent=ans[i];
+        CW_CELLS[k]?.classList.add('ok');
+      })
+    );
+    showCWFb('ok', '🏆 Already solved today! Counted in your win streak.');
   }
 }
 

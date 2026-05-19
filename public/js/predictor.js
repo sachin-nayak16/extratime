@@ -105,6 +105,7 @@ function renderMatches() {
         <input class="score-inp" type="number" min="0" max="20" value="1" id="away-score-${match.id}"
           oninput="predSelections[${match.id}].awayScore=+this.value">
       </div>
+      <div class="scorer-note">🎯 Predict up to 3 goalscorers per team — regardless of your scoreline prediction</div>
       <div class="scorer-section">
         <div class="scorer-label">Predict goalscorers</div>
         <div class="scorer-cols">
@@ -284,6 +285,9 @@ function renderLockedPredictor(state) {
   });
 
   html += `<p style="font-size:11px;color:var(--text-3)">Points awarded after the final whistle.</p></div>`;
+
+  // Prediction history
+  html += buildPredHistory();
   container.innerHTML = html;
 
   // Start countdowns for locked view
@@ -391,4 +395,55 @@ function showResultPopup(pts, messages, isYesterday=false) {
     </div>
   `;
   document.body.appendChild(popup);
+}
+
+// ── PREDICTION HISTORY ────────────────────────────────────
+function buildPredHistory() {
+  const history = [];
+
+  // Scan localStorage for all past prediction states
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key?.startsWith('et_state_')) continue;
+    const dateStr = key.replace('et_state_', '');
+    if (dateStr === CONFIG.today) continue; // skip today
+    try {
+      const state = JSON.parse(localStorage.getItem(key));
+      if (!state?.pred_locked || !state?.pred_data?.length) continue;
+      history.push({ date: dateStr, state });
+    } catch {}
+  }
+
+  if (!history.length) return '';
+
+  // Sort newest first
+  history.sort((a, b) => b.date.localeCompare(a.date));
+
+  let html = `<div style="margin-top:14px">
+    <div style="font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:8px">📋 Your prediction history</div>`;
+
+  history.slice(0, 7).forEach(({ date, state }) => {
+    const pts = state.score_pred;
+    const ptsDisplay = typeof pts === 'number' ? `${pts} pts` : state.pred_result_shown ? '0 pts' : 'Pending';
+    const ptsColor = typeof pts === 'number' && pts > 0 ? 'color:#059669;font-weight:600' : 'color:var(--text-3)';
+    const dateLabel = new Date(date).toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short' });
+
+    html += `<div style="background:var(--bg-2);border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:11px;font-weight:600;color:var(--text)">${dateLabel}</span>
+        <span style="font-size:12px;${ptsColor}">${ptsDisplay}</span>
+      </div>`;
+
+    state.pred_data?.forEach(p => {
+      const scorerNames = p.scorers?.map(s => `${s.name} (${POS_LABEL[s.position]||'?'})`).join(', ') || '—';
+      html += `<div style="font-size:11px;color:var(--text-2);margin-bottom:3px">
+        Predicted: <strong>${p.home}–${p.away}</strong> · Scorers: ${scorerNames}
+      </div>`;
+    });
+
+    html += `</div>`;
+  });
+
+  html += `</div>`;
+  return html;
 }
