@@ -119,7 +119,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 .team-name{font-size:13px;font-weight:600;color:var(--text)}
 .vs-badge{font-size:10px;color:var(--text-3);padding:2px 8px;background:var(--bg-3);border-radius:99px}
 .score-inputs{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:10px}
-.score-inp{width:46px;height:46px;font-size:19px;font-weight:600;text-align:center;border:0.5px solid var(--border-2);border-radius:var(--radius);background:var(--bg-3);color:var(--text);font-family:inherit}
+.score-inp{width:56px;height:56px;font-size:22px;font-weight:700;text-align:center;border:0.5px solid var(--border-2);border-radius:var(--radius);background:var(--bg-3);color:var(--text);font-family:inherit}
 .score-dash{font-size:17px;color:var(--text-3)}
 .scorer-section{border-top:0.5px solid var(--border);padding-top:9px;margin-top:4px}
 .scorer-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:6px}
@@ -219,17 +219,13 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 .csb-title{font-size:12px;font-weight:600;color:#92400e;margin-bottom:2px}
 .csb-sub{font-size:11px;color:#b45309;line-height:1.5}
 
+/* POSITION BADGES — full labels */
+.pos-GK{background:#f1f5f9;color:#475569}
+
 /* COUNTDOWN */
 .countdown-wrap{margin-bottom:8px}
 .countdown{font-size:11px;font-weight:600;color:#065f46;background:#ecfdf5;border:0.5px solid #6ee7b7;border-radius:var(--radius);padding:5px 10px;display:inline-block}
 .countdown.live{color:#dc2626;background:#fee2e2;border-color:#ef4444}
-
-/* SCORE INPUTS — centred */
-.score-inputs{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px}
-.score-inp{width:56px;height:56px;font-size:22px;font-weight:700;text-align:center;border:0.5px solid var(--border-2);border-radius:var(--radius);background:var(--bg-3);color:var(--text);font-family:inherit}
-
-/* POSITION BADGES — full labels */
-.pos-GK{background:#f1f5f9;color:#475569}
 
 /* RESULT POPUP */
 .result-popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:300;padding:16px}
