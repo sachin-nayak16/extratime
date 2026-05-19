@@ -159,8 +159,48 @@ function startCountdown(matchId, kickoff) {
 function toggleScorer(matchId, playerName, position, btn) {
   const sel = predSelections[matchId].scorers;
   const idx = sel.findIndex(s => s.name === playerName);
-  if (idx >= 0) { sel.splice(idx, 1); btn.classList.remove('sel'); }
-  else { sel.push({ name: playerName, position }); btn.classList.add('sel'); }
+  if (idx >= 0) {
+    // Deselect
+    sel.splice(idx, 1);
+    btn.classList.remove('sel');
+  } else {
+    // Check limit — max 3 per team
+    // Determine which team this player belongs to
+    const match = predMatches.find(m => m.id === matchId);
+    const isHome = match?.home_squad?.some(p => p.name === playerName);
+    const teamKey = isHome ? 'home' : 'away';
+    const teamSquad = isHome ? match?.home_squad : match?.away_squad;
+    const teamSelCount = sel.filter(s =>
+      (isHome ? match?.home_squad : match?.away_squad)?.some(p => p.name === s.name)
+    ).length;
+    if (teamSelCount >= 3) {
+      // Flash the button to indicate limit reached
+      btn.style.background = '#fee2e2';
+      btn.style.borderColor = '#ef4444';
+      setTimeout(() => {
+        btn.style.background = '';
+        btn.style.borderColor = '';
+      }, 600);
+      // Show a small toast
+      showPredToast('Max 3 goalscorer predictions per team');
+      return;
+    }
+    sel.push({ name: playerName, position });
+    btn.classList.add('sel');
+  }
+}
+
+function showPredToast(msg) {
+  let t = document.getElementById('pred-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'pred-toast';
+    t.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#334155;color:#fff;padding:8px 16px;border-radius:99px;font-size:11px;font-weight:500;z-index:99;opacity:0;transition:opacity .2s';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  setTimeout(() => t.style.opacity = '0', 2000);
 }
 
 // ── LOCK PREDICTIONS ──────────────────────────────────────

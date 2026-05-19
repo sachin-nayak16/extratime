@@ -1,11 +1,70 @@
 // ─── ADMIN PANEL ───────────────────────────────────────────
-// Password is stored as a hash in config. Change ADMIN_PASSWORD below.
 const ADMIN_PASSWORD = 'extratime2026';
 
 let currentDate = new Date().toISOString().split('T')[0];
 let cwValidated = false;
 let heroSelectedPlayer = null;
 let matchCount = 1;
+
+// ── TEAM DATABASE ─────────────────────────────────────────
+const TEAMS = [
+  // England
+  'Arsenal','Aston Villa','Brentford','Brighton','Burnley','Chelsea','Crystal Palace',
+  'Everton','Fulham','Ipswich Town','Leeds United','Leicester City','Liverpool',
+  'Luton Town','Man City','Man United','Newcastle','Nottm Forest','Sheffield United',
+  'Southampton','Tottenham','West Ham','Wolves','Bournemouth','Watford',
+  // Spain
+  'Real Madrid','Barcelona','Atletico Madrid','Sevilla','Real Betis','Valencia',
+  'Villarreal','Athletic Bilbao','Real Sociedad','Osasuna','Celta Vigo','Getafe',
+  // Germany
+  'Bayern Munich','Borussia Dortmund','RB Leipzig','Bayer Leverkusen','Eintracht Frankfurt',
+  'Wolfsburg','Borussia Monchengladbach','Freiburg','Stuttgart','Hoffenheim',
+  // Italy
+  'Juventus','AC Milan','Inter Milan','Napoli','Roma','Lazio','Atalanta','Fiorentina',
+  'Torino','Bologna','Udinese','Verona',
+  // France
+  'PSG','Marseille','Lyon','Monaco','Lille','Nice','Rennes','Lens','Strasbourg',
+  // Portugal
+  'Benfica','Porto','Sporting CP','Braga',
+  // Netherlands
+  'Ajax','PSV','Feyenoord','AZ Alkmaar',
+  // Champions League / Europe
+  'Celtic','Rangers','Anderlecht','Club Brugge','Galatasaray','Fenerbahce','Besiktas',
+  'Dinamo Zagreb','Red Star Belgrade','Shakhtar Donetsk','Olympiakos','PAOK',
+  // International
+  'England','France','Germany','Spain','Italy','Portugal','Brazil','Argentina',
+  'Netherlands','Belgium','Croatia','Denmark','Sweden','Norway','Switzerland',
+  'Mexico','USA','Uruguay','Colombia','Chile','Peru','Ecuador',
+  'Japan','South Korea','Australia','Saudi Arabia','Morocco','Senegal',
+  'Cameroon','Ghana','Nigeria','Egypt','Tunisia','Algeria',
+  'India','Iran','Qatar','UAE',
+].sort();
+
+function teamAutocomplete(inputId, ddId) {
+  const val = document.getElementById(inputId)?.value?.toLowerCase().trim();
+  const dd = document.getElementById(ddId);
+  if (!dd) return;
+  dd.innerHTML = '';
+  if (!val || val.length < 1) { dd.style.display = 'none'; return; }
+  const matches = TEAMS.filter(t => t.toLowerCase().includes(val)).slice(0, 8);
+  if (!matches.length) { dd.style.display = 'none'; return; }
+  dd.style.display = 'block';
+  matches.forEach(team => {
+    const div = document.createElement('div');
+    div.className = 'hero-dd-opt';
+    div.textContent = team;
+    div.onmousedown = (e) => {
+      e.preventDefault();
+      document.getElementById(inputId).value = team;
+      dd.style.display = 'none';
+    };
+    dd.appendChild(div);
+  });
+  // Close dropdown when clicking outside
+  document.getElementById(inputId).onblur = () => {
+    setTimeout(() => { dd.style.display = 'none'; }, 150);
+  };
+}
 
 // ── AUTH ──────────────────────────────────────────────────
 function adminLogin() {
@@ -352,8 +411,14 @@ function addMatch() {
   div.innerHTML = `
     <div class="match-block-hdr">Match ${n}</div>
     <div class="form-grid">
-      <div class="field"><label>Home team <span class="req">*</span></label><input type="text" id="m${n}-home" placeholder="e.g. Man City"></div>
-      <div class="field"><label>Away team <span class="req">*</span></label><input type="text" id="m${n}-away" placeholder="e.g. Chelsea"></div>
+      <div class="field"><label>Home team <span class="req">*</span></label>
+        <input type="text" id="m${n}-home" placeholder="e.g. Man City" oninput="teamAutocomplete('m${n}-home','m${n}-home-dd')" autocomplete="off">
+        <div class="hero-dd" id="m${n}-home-dd"></div>
+      </div>
+      <div class="field"><label>Away team <span class="req">*</span></label>
+        <input type="text" id="m${n}-away" placeholder="e.g. Chelsea" oninput="teamAutocomplete('m${n}-away','m${n}-away-dd')" autocomplete="off">
+        <div class="hero-dd" id="m${n}-away-dd"></div>
+      </div>
       <div class="field"><label>Kick-off time</label><input type="datetime-local" id="m${n}-time"></div>
       <div class="field"><label>Competition</label><input type="text" id="m${n}-comp" placeholder="e.g. FA Cup Final"></div>
       <div class="field"><label>Venue</label><input type="text" id="m${n}-venue" placeholder="e.g. Wembley"></div>
@@ -585,6 +650,11 @@ async function saveHeroes() {
 // ── SUPABASE HELPERS ──────────────────────────────────────
 async function upsertContent(updates) {
   setSaveStatus('Saving...');
+  if (!sb) {
+    setSaveStatus('Save failed');
+    showToast('❌ Database not connected. Check config.js credentials and refresh.');
+    return false;
+  }
   try {
     // First try to get existing row
     const { data: existing } = await sb
