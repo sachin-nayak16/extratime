@@ -489,6 +489,8 @@ function toggleFinalFields(n) {
   const fields = document.getElementById(`m${n}-final-fields`);
   if (fields) fields.style.display = cb?.checked ? 'block' : 'none';
 }
+
+function importCSV(n, side) {
   const csvId = `m${n}-${side}-csv`;
   const listId = `m${n}-${side}-players`;
   const raw = document.getElementById(csvId)?.value?.trim();
