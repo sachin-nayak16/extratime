@@ -411,6 +411,7 @@ function addMatch() {
   div.innerHTML = `
     <div class="match-block-hdr">Match ${n}</div>
     <div class="form-grid">
+    <div class="form-grid">
       <div class="field"><label>Home team <span class="req">*</span></label>
         <input type="text" id="m${n}-home" placeholder="e.g. Man City" oninput="teamAutocomplete('m${n}-home','m${n}-home-dd')" autocomplete="off">
         <div class="hero-dd" id="m${n}-home-dd"></div>
@@ -422,6 +423,22 @@ function addMatch() {
       <div class="field"><label>Kick-off time</label><input type="datetime-local" id="m${n}-time"></div>
       <div class="field"><label>Competition</label><input type="text" id="m${n}-comp" placeholder="e.g. FA Cup Final"></div>
       <div class="field"><label>Venue</label><input type="text" id="m${n}-venue" placeholder="e.g. Wembley"></div>
+      <div class="field" style="display:flex;align-items:center;gap:8px;padding-top:20px">
+        <input type="checkbox" id="m${n}-final" onchange="toggleFinalFields(${n})" style="width:16px;height:16px;accent-color:#059669">
+        <label style="font-size:12px;color:var(--text);text-transform:none;letter-spacing:0;cursor:pointer" for="m${n}-final">🏆 Finals mode (ET & Penalties predictions)</label>
+      </div>
+    </div>
+
+    <div id="m${n}-final-fields" style="display:none;background:#ecfdf5;border:0.5px solid #6ee7b7;border-radius:var(--radius);padding:12px;margin-bottom:12px">
+      <div class="acard-title" style="color:#065f46;margin-bottom:8px">Finals mode — ET & Penalties</div>
+      <div class="form-grid">
+        <div class="field"><label>Did it go to Extra Time?</label>
+          <select id="m${n}-went-et"><option value="">Not yet</option><option value="yes">Yes</option><option value="no">No</option></select>
+        </div>
+        <div class="field"><label>Did it go to Penalties?</label>
+          <select id="m${n}-went-pens"><option value="">Not yet</option><option value="yes">Yes</option><option value="no">No</option></select>
+        </div>
+      </div>
     </div>
 
     <div class="csv-import-box">
@@ -467,7 +484,11 @@ function addMatch() {
   matchCount++;
 }
 
-function importCSV(n, side) {
+function toggleFinalFields(n) {
+  const cb = document.getElementById(`m${n}-final`);
+  const fields = document.getElementById(`m${n}-final-fields`);
+  if (fields) fields.style.display = cb?.checked ? 'block' : 'none';
+}
   const csvId = `m${n}-${side}-csv`;
   const listId = `m${n}-${side}-players`;
   const raw = document.getElementById(csvId)?.value?.trim();
@@ -553,6 +574,9 @@ async function savePredictor() {
       away_result: parseInt(document.getElementById(`m${n}-away-result`)?.value) ?? null,
       home_actual_scorers: (document.getElementById(`m${n}-home-scorers`)?.value||'').split(',').map(s=>s.trim()).filter(Boolean),
       away_actual_scorers: (document.getElementById(`m${n}-away-scorers`)?.value||'').split(',').map(s=>s.trim()).filter(Boolean),
+      is_final: document.getElementById(`m${n}-final`)?.checked || false,
+      went_to_et: document.getElementById(`m${n}-went-et`)?.value === 'yes' ? true : document.getElementById(`m${n}-went-et`)?.value === 'no' ? false : null,
+      went_to_pens: document.getElementById(`m${n}-went-pens`)?.value === 'yes' ? true : document.getElementById(`m${n}-went-pens`)?.value === 'no' ? false : null,
     });
   }
   if (!matches.length) { showToast('Please add at least one match.'); return; }

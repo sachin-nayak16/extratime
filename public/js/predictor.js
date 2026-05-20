@@ -74,7 +74,7 @@ function renderMatches() {
   countdownTimers = [];
 
   predMatches.forEach(match => {
-    predSelections[match.id] = { homeScore:1, awayScore:1, scorers:[] };
+    predSelections[match.id] = { homeScore:1, awayScore:1, scorers:[], et:null, pens:null };
 
     const kickoff = new Date(match.kickoff);
     const timeStr = kickoff.toLocaleString('en-IN', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
@@ -105,6 +105,24 @@ function renderMatches() {
         <input class="score-inp" type="number" min="0" max="20" value="1" id="away-score-${match.id}"
           oninput="predSelections[${match.id}].awayScore=+this.value">
       </div>
+      ${match.is_final ? `
+      <div class="final-predictions">
+        <div class="final-pred-title">🏆 Finals bonus predictions <span class="final-pred-pts">+1 pt correct · −1 pt wrong</span></div>
+        <div class="final-pred-row">
+          <span class="final-pred-label">Will this go to Extra Time?</span>
+          <div class="final-pred-btns">
+            <button class="final-btn" id="et-yes-${match.id}" onclick="setFinalPred(${match.id},'et','yes',this)">Yes</button>
+            <button class="final-btn" id="et-no-${match.id}" onclick="setFinalPred(${match.id},'et','no',this)">No</button>
+          </div>
+        </div>
+        <div class="final-pred-row" id="pens-row-${match.id}" style="display:none">
+          <span class="final-pred-label">Will this go to Penalties?</span>
+          <div class="final-pred-btns">
+            <button class="final-btn" id="pens-yes-${match.id}" onclick="setFinalPred(${match.id},'pens','yes',this)">Yes</button>
+            <button class="final-btn" id="pens-no-${match.id}" onclick="setFinalPred(${match.id},'pens','no',this)">No</button>
+          </div>
+        </div>
+      </div>` : ''}
       <div class="scorer-note">🎯 Predict up to 3 goalscorers per team — regardless of your scoreline prediction</div>
       <div class="scorer-section">
         <div class="scorer-label">Predict goalscorers</div>
@@ -206,7 +224,25 @@ function toggleScorer(matchId, playerName, position, btn) {
   }
 }
 
-function showPredToast(msg) {
+function setFinalPred(matchId, type, val, btn) {
+  predSelections[matchId][type] = val;
+  // Update button styles
+  const yesBtn = document.getElementById(`${type}-yes-${matchId}`);
+  const noBtn  = document.getElementById(`${type}-no-${matchId}`);
+  if (yesBtn) yesBtn.classList.toggle('final-btn-sel', val === 'yes');
+  if (noBtn)  noBtn.classList.toggle('final-btn-sel', val === 'no');
+  // Show/hide penalties question based on ET answer
+  if (type === 'et') {
+    const pensRow = document.getElementById(`pens-row-${matchId}`);
+    if (pensRow) {
+      pensRow.style.display = val === 'yes' ? 'flex' : 'none';
+      if (val === 'no') {
+        // If no ET, no penalties either
+        predSelections[matchId].pens = 'no';
+      }
+    }
+  }
+}
   let t = document.getElementById('pred-toast');
   if (!t) {
     t = document.createElement('div');
@@ -226,6 +262,8 @@ async function lockPredictions() {
     home: predSelections[m.id]?.homeScore ?? 1,
     away: predSelections[m.id]?.awayScore ?? 1,
     scorers: predSelections[m.id]?.scorers ?? [],
+    et: predSelections[m.id]?.et ?? null,
+    pens: predSelections[m.id]?.pens ?? null,
   }));
 
   saveState({ pred_locked:true, pred_data:allPreds, score_pred:'Locked' });
@@ -275,6 +313,12 @@ function renderLockedPredictor(state) {
       html += `<div style="font-size:11px;color:var(--text-2);margin-bottom:4px">
         <strong>Predicted scorers:</strong> ${p.scorers.map(s=>`${s.name} <span class="${POS_CLS[s.position]||'pos-M'} pos-badge">${POS_LABEL[s.position]||'?'}</span>`).join(', ')}
       </div>`;
+    }
+    if (p.et !== null) {
+      html += `<div style="font-size:11px;color:var(--text-2);margin-bottom:2px">Extra Time: <strong>${p.et === 'yes' ? 'Yes' : 'No'}</strong></div>`;
+    }
+    if (p.pens !== null && p.et === 'yes') {
+      html += `<div style="font-size:11px;color:var(--text-2);margin-bottom:4px">Penalties: <strong>${p.pens === 'yes' ? 'Yes' : 'No'}</strong></div>`;
     }
 
     // Show countdown if match hasn't started
@@ -339,6 +383,23 @@ function checkAndShowResultsForMatches(state, matches, isYesterday) {
       if (Math.abs(hr-ar) === Math.abs(ph-pa) && !(ph===hr&&pa===ar)) {
         totalPts += SCORING.predictor.correctGoalDiff;
         messages.push(`✓ Correct goal difference → +${SCORING.predictor.correctGoalDiff} pts`);
+      }
+    }
+
+    // ET prediction scoring
+    if (m.is_final && p.et !== null && m.went_to_et !== null) {
+      const etCorrect = (p.et === 'yes') === (m.went_to_et === true);
+      totalPts += etCorrect ? 1 : -1;
+      messages.push(etCorrect
+        ? `✓ Extra Time prediction correct → +1 pt`
+        : `✗ Extra Time prediction wrong → −1 pt`);
+      // If ET happened, also score pens prediction
+      if (m.went_to_et && p.pens !== null && m.went_to_pens !== null) {
+        const pensCorrect = (p.pens === 'yes') === (m.went_to_pens === true);
+        totalPts += pensCorrect ? 1 : -1;
+        messages.push(pensCorrect
+          ? `✓ Penalties prediction correct → +1 pt`
+          : `✗ Penalties prediction wrong → −1 pt`);
       }
     }
 
