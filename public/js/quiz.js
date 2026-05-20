@@ -15,14 +15,12 @@ async function initQuiz() {
   qAssists = state.assists || 0;
   updateAssistDisplay();
 
-  // Restore in-progress quiz state
+  // Already fully completed today
   if (state.quiz_done) {
-    showQuizDone(state.score_quiz || 0);
+    qScore = state.score_quiz || 0;
+    qAssists = state.assists || 0;
+    showQuizDone(qScore);
     return;
-  }
-  if (state.quiz_idx !== undefined) {
-    qIdx = state.quiz_idx;
-    qScore = state.quiz_score_so_far || 0;
   }
 
   // Load questions from Supabase
@@ -30,6 +28,22 @@ async function initQuiz() {
     const { data } = await sb.from('daily_content').select('quiz_questions').eq('date', CONFIG.today).maybeSingle();
     qData = data?.quiz_questions?.length ? data.quiz_questions : SAMPLE_QUESTIONS;
   } catch { qData = SAMPLE_QUESTIONS; }
+
+  // Restore progress — only restore index and score, never re-answer questions
+  // quiz_answers stores {idx: score_earned} so we know exactly what was already counted
+  const savedAnswers = state.quiz_answers || {};
+  if (Object.keys(savedAnswers).length > 0) {
+    // Recalculate score from saved answers to avoid double-counting
+    qScore = Object.values(savedAnswers).reduce((sum, pts) => sum + pts, 0);
+    // Resume from the next unanswered question
+    const answeredIdxs = Object.keys(savedAnswers).map(Number);
+    qIdx = Math.max(...answeredIdxs) + 1;
+    document.getElementById('sc-quiz').textContent = qScore + 'pts';
+    updateScoreDisplay();
+  } else {
+    qIdx = 0;
+    qScore = 0;
+  }
 
   renderQuestion();
 }
@@ -99,7 +113,8 @@ function submitAnswer() {
   const accepted = (q.accepted||[q.answer.toLowerCase()]).map(a=>a.toLowerCase());
   const correct = accepted.some(a => userAns===a || userAns.includes(a) || a.includes(userAns));
 
-  if (correct) { qScore += SCORING.quiz.perQuestion; if (!qAssistUsed) qAssists++; }
+  const ptsEarned = correct ? SCORING.quiz.perQuestion : 0;
+  if (correct) { qScore += ptsEarned; if (!qAssistUsed) qAssists++; }
 
   const fb = document.getElementById('q-feedback');
   fb.className = 'q-feedback '+(correct?'ok':'bad');
@@ -115,8 +130,12 @@ function submitAnswer() {
 
   document.getElementById('sc-quiz').textContent = qScore+'pts';
   updateAssistDisplay(); updateScoreDisplay();
-  // Save progress so refresh restores state
-  saveState({ assists:qAssists, quiz_idx:qIdx, quiz_score_so_far:qScore });
+
+  // Save this question's result by index — prevents double counting on refresh
+  const state = getState();
+  const savedAnswers = state.quiz_answers || {};
+  savedAnswers[qIdx] = ptsEarned;
+  saveState({ assists:qAssists, quiz_answers: savedAnswers });
 }
 
 function nextQ() {
@@ -126,7 +145,7 @@ function nextQ() {
 }
 
 function finishQuiz() {
-  saveState({ quiz_done:true, score_quiz:qScore, assists:qAssists, quiz_idx:qIdx });
+  saveState({ quiz_done:true, score_quiz:qScore, assists:qAssists, quiz_answers:{} });
   saveScoreToDb('quiz', qScore);
   updateScoreDisplay();
   showQuizDone(qScore);
