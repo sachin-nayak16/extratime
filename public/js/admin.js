@@ -250,28 +250,29 @@ function cwAutoSolve() {
       return;
     }
 
-    // Attach clues and word lengths
+    // Attach clues and word lengths using origIdx from solver
     solution.across.forEach((a, i) => {
-      const origIdx = solution.acrossOrigIdx[i];
+      const origIdx = a.origIdx;
       a.clue = clues[origIdx];
       a.wordLengths = wordLengths[origIdx];
       a.display = wordLengths[origIdx] ? `(${wordLengths[origIdx]})` : `(${a.word.length})`;
+      a.number = i + 1;
     });
     solution.down.forEach((d, i) => {
-      const origIdx = solution.downOrigIdx[i];
+      const origIdx = d.origIdx;
       d.clue = clues[origIdx];
       d.wordLengths = wordLengths[origIdx];
       d.display = wordLengths[origIdx] ? `(${wordLengths[origIdx]})` : `(${d.word.length})`;
+      d.number = i + 4;
     });
 
     cwSolution = solution;
     cwValidated = true;
     document.getElementById('cw-save-btn').disabled = false;
 
-    // Show what was assigned
     const acrossWords = solution.across.map((a,i) => `${i+1} Across: ${a.word} ${a.display}`).join(' · ');
     const downWords = solution.down.map((d,i) => `${i+4} Down: ${d.word} ${d.display}`).join(' · ');
-    const intCount = solution.intersections.length;
+    const intCount = solution.intCount || 0;
 
     statusEl.className = 'validate-status validate-ok';
     statusEl.innerHTML = `✓ Grid solved! ${intCount} intersections found.<br>
@@ -317,7 +318,7 @@ async function saveCW(asDraft = false) {
         col: d.col,
         rowStart: d.rowStart,
       })),
-      intersections: cwSolution.intersections,
+      intCount: cwSolution.intCount,
     };
   }
 
