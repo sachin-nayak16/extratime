@@ -237,3 +237,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 .rp-pts{font-size:28px;font-weight:700;color:var(--green);margin-bottom:14px}
 .rp-msgs{text-align:left;margin-bottom:16px;display:flex;flex-direction:column;gap:5px}
 .rp-msg{font-size:12px;color:var(--text-2);background:var(--bg-3);border-radius:var(--radius);padding:7px 10px}
+
+/* FINALS MODE — ET & PENALTIES */
+.final-predictions{background:#fffbeb;border:0.5px solid #fde68a;border-radius:var(--radius);padding:11px 13px;margin-bottom:10px}
+.final-pred-title{font-size:11px;font-weight:600;color:#92400e;margin-bottom:9px}
+.final-pred-pts{font-size:10px;font-weight:400;color:#b45309;margin-left:6px}
+.final-pred-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.final-pred-row:last-child{margin-bottom:0}
+.final-pred-label{font-size:12px;color:var(--text);font-weight:500}
+.final-pred-btns{display:flex;gap:6px}
+.final-btn{padding:5px 16px;font-size:11px;font-weight:500;border:0.5px solid var(--border-2);border-radius:99px;background:var(--bg-2);color:var(--text-2);cursor:pointer}
+.final-btn:hover{border-color:#ca8a04;color:#92400e;background:#fef9c3}
+.final-btn-sel{background:#fef9c3;border-color:#ca8a04;color:#92400e;font-weight:600}
