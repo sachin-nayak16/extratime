@@ -237,12 +237,13 @@ function setFinalPred(matchId, type, val, btn) {
     if (pensRow) {
       pensRow.style.display = val === 'yes' ? 'flex' : 'none';
       if (val === 'no') {
-        // If no ET, no penalties either
         predSelections[matchId].pens = 'no';
       }
     }
   }
 }
+
+function showPredToast(msg) {
   let t = document.getElementById('pred-toast');
   if (!t) {
     t = document.createElement('div');
