@@ -1,39 +1,101 @@
 // ─── CROSSWORD ─────────────────────────────────────────────
-// Grid verified by Python solver — all hard constraints met:
-// No adjacent across rows (gaps: 3, 4 rows)
-// METLIFE col(9) strictly outside MANDZUKIC cols(0-8)
-// All 4 intersections verified with no letter conflicts
 
-const CW_DATA = {
-  across: {
-    1: { r:7, cs:[0,1,2,3,4,5,6,7,8],    ans:'MANDZUKIC', display:'(9)',   label:'Goal-scorer in the 2018 WC Final' },
-    2: { r:0, cs:[2,3,4,5,6,7,8,9,10,11], ans:'JULESRIMET',display:'(5,5)', label:'Old FIFA WC Trophy named after him' },
-    3: { r:3, cs:[8,9,10,11,12],           ans:'KLOSE',     display:'(5)',   label:'All-time leading WC goal scorer' },
-  },
-  down: {
-    4: { c:9, rs:[0,1,2,3,4,5,6],          ans:'METLIFE',  display:'(7)',   label:'Venue of the 2026 WC Final' },
-    5: { c:3, rs:[5,6,7,8,9,10,11,12,13],  ans:'RODRIGUEZ',display:'(9)',   label:'FIFA Golden Boot winner in 2014' },
-    6: { c:1, rs:[6,7,8,9,10,11,12,13],    ans:'MARACANA', display:'(8)',   label:'Iconic stadium — 2014 WC Final' },
-  }
+// Fallback hardcoded puzzle (shown when no Supabase content for today)
+const CW_FALLBACK = {
+  across: [
+    { number:1, answer:'MANDZUKIC', clue:'Goal-scorer in the 2018 WC Final', display:'(9)',   row:7, colStart:0 },
+    { number:2, answer:'JULESRIMET',clue:'Old FIFA WC Trophy named after him', display:'(5,5)', row:0, colStart:2 },
+    { number:3, answer:'KLOSE',     clue:'All-time leading WC goal scorer',    display:'(5)',   row:3, colStart:8 },
+  ],
+  down: [
+    { number:4, answer:'METLIFE',   clue:'Venue of the 2026 WC Final',         display:'(7)',   col:9, rowStart:0 },
+    { number:5, answer:'RODRIGUEZ', clue:'FIFA Golden Boot winner in 2014',     display:'(9)',   col:3, rowStart:5 },
+    { number:6, answer:'MARACANA',  clue:'Iconic stadium — 2014 WC Final',      display:'(8)',   col:1, rowStart:6 },
+  ]
 };
 
-const CW_NUMS = {};
-function _addNum(r,c,n){ CW_NUMS[`${r},${c}`] = n; }
-_addNum(7,0,1); _addNum(0,2,2); _addNum(3,8,3);
-_addNum(0,9,4); _addNum(5,3,5); _addNum(6,1,6);
+// Active crossword data — set by initCrossword from Supabase or fallback
+let CW_DATA = { across:{}, down:{} };
+let CW_WHITE = new Set();
+let CW_NUMS = {};
+let CW_ROWS = 14, CW_COLS = 13;
+const CW_SZ = 30;
+const CW_CELLS = {}, CW_VALS = {};
+let cwDir='A', cwNum=1, cwFocus=null;
 
-const CW_WHITE = new Set();
-Object.values(CW_DATA.across).forEach(({r,cs}) => cs.forEach(c => CW_WHITE.add(`${r},${c}`)));
-Object.values(CW_DATA.down).forEach(({c,rs}) => rs.forEach(r => CW_WHITE.add(`${r},${c}`)));
+function buildCWDataFromSupabase(cwContent) {
+  // cwContent has across[] and down[] arrays from admin auto-solver
+  const across = cwContent.across || [];
+  const down = cwContent.down || [];
 
-const CW_ROWS=14, CW_COLS=13, CW_SZ=30;
-const CW_CELLS={}, CW_VALS={};
-let cwDir='A', cwNum=2, cwFocus=null;
+  // Build CW_DATA in the format the rest of the code expects
+  CW_DATA = { across:{}, down:{} };
+  across.forEach((a, i) => {
+    const n = a.number || (i+1);
+    const cs = Array.from({length: a.answer.length}, (_,j) => a.colStart + j);
+    CW_DATA.across[n] = { r: a.row, cs, ans: a.answer, display: a.display || `(${a.answer.length})`, label: a.clue };
+  });
+  down.forEach((d, i) => {
+    const n = d.number || (i+4);
+    const rs = Array.from({length: d.answer.length}, (_,j) => d.rowStart + j);
+    CW_DATA.down[n] = { c: d.col, rs, ans: d.answer, display: d.display || `(${d.answer.length})`, label: d.clue };
+  });
 
-function initCrossword(todayContent) {
+  rebuildCWGeometry();
+}
+
+function buildCWDataFromFallback() {
+  CW_DATA = { across:{}, down:{} };
+  CW_FALLBACK.across.forEach(a => {
+    const cs = Array.from({length: a.answer.length}, (_,j) => a.colStart + j);
+    CW_DATA.across[a.number] = { r: a.row, cs, ans: a.answer, display: a.display, label: a.clue };
+  });
+  CW_FALLBACK.down.forEach(d => {
+    const rs = Array.from({length: d.answer.length}, (_,j) => d.rowStart + j);
+    CW_DATA.down[d.number] = { c: d.col, rs, ans: d.answer, display: d.display, label: d.clue };
+  });
+  rebuildCWGeometry();
+}
+
+function rebuildCWGeometry() {
+  // Rebuild WHITE cells set and cell numbers
+  CW_WHITE = new Set();
+  CW_NUMS = {};
+  Object.values(CW_DATA.across).forEach(({r,cs}) => cs.forEach(c => CW_WHITE.add(`${r},${c}`)));
+  Object.values(CW_DATA.down).forEach(({c,rs}) => rs.forEach(r => CW_WHITE.add(`${r},${c}`)));
+
+  // Calculate grid dimensions
+  const allRows = [...Object.values(CW_DATA.across).map(a=>a.r),
+    ...Object.values(CW_DATA.down).flatMap(d=>d.rs)];
+  const allCols = [...Object.values(CW_DATA.across).flatMap(a=>a.cs),
+    ...Object.values(CW_DATA.down).map(d=>d.c)];
+  CW_ROWS = Math.max(...allRows) + 1;
+  CW_COLS = Math.max(...allCols) + 1;
+
+  // Assign cell numbers — first cell of each word
+  Object.entries(CW_DATA.across).forEach(([n,{r,cs}]) => {
+    const k = `${r},${cs[0]}`;
+    if (!CW_NUMS[k]) CW_NUMS[k] = +n;
+  });
+  Object.entries(CW_DATA.down).forEach(([n,{c,rs}]) => {
+    const k = `${rs[0]},${c}`;
+    if (!CW_NUMS[k]) CW_NUMS[k] = +n;
+  });
+}
+
+async function initCrossword(todayContent) {
   const state = getState();
   buildCWStats(state);
-  buildCWGrid(); // builds cells first
+
+  // Load crossword data from Supabase content or fallback
+  if (todayContent?.crossword && !todayContent.crossword.draft &&
+      todayContent.crossword.across?.length && todayContent.crossword.down?.length) {
+    buildCWDataFromSupabase(todayContent.crossword);
+  } else {
+    buildCWDataFromFallback();
+  }
+
+  buildCWGrid();
   buildCWClues();
 
   // Restore typed letters AFTER grid is built
@@ -49,7 +111,6 @@ function initCrossword(todayContent) {
 
   // Restore solved state
   if (state.cw_solved) {
-    // Fill in correct letters
     Object.entries(CW_DATA.across).forEach(([,{r,cs,ans}]) =>
       cs.forEach((c,i) => {
         const k=`${r},${c}`;
@@ -70,6 +131,10 @@ function initCrossword(todayContent) {
     );
     showCWFb('ok', '🏆 Already solved today! Counted in your win streak.');
   }
+
+  // Select first clue
+  const firstNum = Math.min(...Object.keys(CW_DATA.across).map(Number));
+  cwSelClue('A', firstNum);
 }
 
 function buildCWStats(state) {
@@ -87,6 +152,10 @@ function buildCWStats(state) {
 }
 
 function buildCWGrid() {
+  // Clear existing cells
+  Object.keys(CW_CELLS).forEach(k => delete CW_CELLS[k]);
+  Object.keys(CW_VALS).forEach(k => delete CW_VALS[k]);
+
   const g = document.getElementById('cw-grid');
   g.style.gridTemplateColumns = `repeat(${CW_COLS},${CW_SZ}px)`;
   g.style.gridTemplateRows = `repeat(${CW_ROWS},${CW_SZ}px)`;
