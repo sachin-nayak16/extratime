@@ -108,15 +108,28 @@ function initAdmin() {
 }
 
 function onDateChange() {
-  currentDate = document.getElementById('global-date').value;
+  const raw = document.getElementById('global-date').value;
+  // HTML date input always returns YYYY-MM-DD regardless of display format
+  // But if it returns DD/MM/YYYY, convert it
+  if (raw.includes('/')) {
+    const parts = raw.split('/');
+    if (parts.length === 3) {
+      // Could be DD/MM/YYYY or MM/DD/YYYY — assume DD/MM/YYYY for Indian locale
+      currentDate = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+    }
+  } else {
+    currentDate = raw; // already YYYY-MM-DD
+  }
+  document.getElementById('date-status').textContent = `Loading ${currentDate}...`;
   loadDateContent(currentDate);
 }
 
 async function loadDateContent(date) {
   const statusEl = document.getElementById('date-status');
   statusEl.textContent = 'Loading...';
+  statusEl.style.color = '#94a3b8';
   try {
-    const { data } = await sb.from('daily_content').select('*').eq('date', date).single();
+    const { data } = await sb.from('daily_content').select('*').eq('date', date).maybeSingle();
     if (data) {
       statusEl.textContent = '✓ Content exists for this date';
       statusEl.style.color = '#059669';
@@ -125,9 +138,9 @@ async function loadDateContent(date) {
       statusEl.textContent = 'No content yet for this date';
       statusEl.style.color = '#94a3b8';
     }
-  } catch {
-    statusEl.textContent = 'No content yet for this date';
-    statusEl.style.color = '#94a3b8';
+  } catch(e) {
+    statusEl.textContent = 'Error loading: ' + e.message;
+    statusEl.style.color = '#dc2626';
   }
   updateContentStatus();
 }
@@ -718,7 +731,7 @@ async function updateContentStatus() {
   const tbody = document.getElementById('content-status-tbody');
   if (!tbody) return;
   try {
-    const { data } = await sb.from('daily_content').select('*').eq('date', currentDate).single();
+    const { data } = await sb.from('daily_content').select('*').eq('date', currentDate).maybeSingle();
     const games = [
       { name:'Crossword',       key:'crossword',       summary: data?.crossword ? '6 clues ready' : '—' },
       { name:'Quiz',            key:'quiz_questions',  summary: data?.quiz_questions ? '5 questions' : '—' },
