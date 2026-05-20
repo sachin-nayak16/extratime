@@ -31,8 +31,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   initCrossword(todayContent);
   initQuiz();
   initPredictor(todayContent, yesterdayContent);
-  initDecode();
-  initHeroes();
+  initDecode(todayContent);
+  initHeroes(todayContent);
 
   // Handle magic link redirect
   if (window.location.hash.includes('access_token')) {

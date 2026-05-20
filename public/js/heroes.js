@@ -1,6 +1,7 @@
 // ─── WC HEROES ─────────────────────────────────────────────
 
-const HEROES_TODAY = {
+// Default fallback — overridden by Supabase content
+let HEROES_TODAY = {
   name:'Ronaldo (R9)', firstName:'Ronaldo Nazário', display:'Ronaldo (R9) — Brazil',
   confederation:'CONMEBOL', country:'Brazil', position:'Forward',
   debutWC:1994, editions:4, goals:15, wcWinner:'Yes'
@@ -137,8 +138,20 @@ let heroGuesses=0, heroSelected=null, heroDone=false, heroRevealing=false;
 const heroGuessed = new Set();
 let heroFiltered=[], heroHlIdx=-1;
 
-function initHeroes() {
+async function initHeroes() {
   const state = getState();
+
+  // Load today's WC Hero from Supabase
+  try {
+    const { data } = await sb.from('daily_content').select('wc_hero').eq('date', CONFIG.today).maybeSingle();
+    if (data?.wc_hero) {
+      HEROES_TODAY = data.wc_hero;
+      // Build display string if not set
+      if (!HEROES_TODAY.display) {
+        HEROES_TODAY.display = `${HEROES_TODAY.firstName || HEROES_TODAY.name} — ${HEROES_TODAY.country}`;
+      }
+    }
+  } catch { /* use fallback */ }
 
   // Build header row
   const header = document.getElementById('guess-header');

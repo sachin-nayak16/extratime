@@ -6,7 +6,7 @@ const SAMPLE_RIDDLE = {
   accepted: ["trophy","world cup trophy","the trophy","fifa trophy","world cup","the world cup trophy","fifa world cup trophy"],
 };
 
-async function initDecode() {
+async function initDecode(todayContent) {
   const state = getState();
   buildDecodeStats(state);
 
@@ -19,27 +19,15 @@ async function initDecode() {
     return;
   }
 
-  // Load from Supabase
-  try {
-    const { data } = await sb
-      .from('daily_content')
-      .select('riddle')
-      .eq('date', CONFIG.today)
-      .single();
-    const riddle = data?.riddle || SAMPLE_RIDDLE;
-    document.getElementById('riddle-text').textContent = `"${riddle.riddle}"`;
-    document.getElementById('decode-ans').dataset.accepted = JSON.stringify(riddle.accepted);
-    document.getElementById('decode-ans').dataset.answer = riddle.answer;
-  } catch {
-    document.getElementById('riddle-text').textContent = `"${SAMPLE_RIDDLE.riddle}"`;
-    document.getElementById('decode-ans').dataset.accepted = JSON.stringify(SAMPLE_RIDDLE.accepted);
-    document.getElementById('decode-ans').dataset.answer = SAMPLE_RIDDLE.answer;
-  }
+  // Use content passed from app.js (already loaded) or fallback to sample
+  const riddle = todayContent?.riddle || SAMPLE_RIDDLE;
+  document.getElementById('riddle-text').textContent = `"${riddle.riddle}"`;
+  document.getElementById('decode-ans').dataset.accepted = JSON.stringify(riddle.accepted || [riddle.answer?.toLowerCase()]);
+  document.getElementById('decode-ans').dataset.answer = riddle.answer;
 
   // Allow Enter key to submit
-  document.getElementById('decode-ans').addEventListener('keydown', e => {
-    if (e.key === 'Enter') checkDecode();
-  });
+  const inp = document.getElementById('decode-ans');
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') checkDecode(); });
 }
 
 function buildDecodeStats(state) {
