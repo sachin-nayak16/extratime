@@ -1,19 +1,34 @@
 // ─── SUPABASE CONFIG ───────────────────────────────────────
 // Replace these with your actual Supabase project values
 // Found in: Supabase Dashboard → Project Settings → API
-const SUPABASE_URL = 'https://ttrljkgdxhsczcrqluzb.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR0cmxqa2dkeGhzY3pjcnFsdXpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMTY0MTcsImV4cCI6MjA5NDU5MjQxN30.WxLBQXqhqvSNN1gsOO_jGjRNDx6mrKJkRTQmJTFQjgE';
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
 
 // ─── INIT SUPABASE ─────────────────────────────────────────
-const { createClient } = supabase;
-const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let sb;
+try {
+  const { createClient } = supabase;
+  sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storageKey: 'extratime-auth',
+    }
+  });
+} catch(e) {
+  console.error('Supabase failed to initialise:', e);
+}
 
 // ─── APP CONFIG ────────────────────────────────────────────
+// Use local date (not UTC) so IST users get the correct date after midnight
+const _now = new Date();
+const _localDate = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
+
 const CONFIG = {
   siteName: 'Extra Time',
-  siteUrl: 'https://extratime.vercel.app',
-  // Today's date string used as the daily key
-  today: new Date().toISOString().split('T')[0],
+  siteUrl: 'https://extratime-eight.vercel.app',
+  today: _localDate,
 };
 
 // ─── SCORING ───────────────────────────────────────────────
