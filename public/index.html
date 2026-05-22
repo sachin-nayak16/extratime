@@ -141,8 +141,8 @@
     <button class="lb-btn active" id="tog-today" onclick="toggleLB('today')">Today</button>
     <button class="lb-btn" id="tog-alltime" onclick="toggleLB('alltime')">All-time</button>
   </div>
-  <div id="lb-today"><div class="card" id="lb-today-card"><p class="loading">Loading...</p></div><button class="btn-full" onclick="showAuth()">Sign in to join leaderboard</button></div>
-  <div id="lb-alltime" style="display:none"><div class="card" id="lb-alltime-card"><p class="loading">Loading...</p></div><button class="btn-full" onclick="showAuth()">Sign in to join leaderboard</button></div>
+  <div id="lb-today"><div class="card" id="lb-today-card"><p class="loading">Loading...</p></div><button class="btn-full lb-signin-btn" id="lb-signin-today" onclick="showAuth()" style="display:none">Sign in to join leaderboard</button></div>
+  <div id="lb-alltime" style="display:none"><div class="card" id="lb-alltime-card"><p class="loading">Loading...</p></div><button class="btn-full lb-signin-btn" id="lb-signin-alltime" onclick="showAuth()" style="display:none">Sign in to join leaderboard</button></div>
   <div class="divider"></div>
   <p class="section-label">Your badges</p>
   <div class="badge-row" id="badge-row">
