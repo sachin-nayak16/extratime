@@ -97,7 +97,9 @@ function checkAdminAuth() {
 
 // ── INIT ─────────────────────────────────────────────────
 function initAdmin() {
-  const today = new Date().toISOString().split('T')[0];
+  // Use local date (not UTC) to avoid off-by-one in IST timezone
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   document.getElementById('global-date').value = today;
   currentDate = today;
   buildQuizEditor();
@@ -108,17 +110,22 @@ function initAdmin() {
 }
 
 function onDateChange() {
-  const raw = document.getElementById('global-date').value;
-  // HTML date input always returns YYYY-MM-DD regardless of display format
-  // But if it returns DD/MM/YYYY, convert it
-  if (raw.includes('/')) {
-    const parts = raw.split('/');
-    if (parts.length === 3) {
-      // Could be DD/MM/YYYY or MM/DD/YYYY — assume DD/MM/YYYY for Indian locale
-      currentDate = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
-    }
+  const input = document.getElementById('global-date');
+  // valueAsDate is always UTC midnight — convert to local date string
+  const d = input.valueAsDate;
+  if (d) {
+    // Add timezone offset to get local date
+    const local = new Date(d.getTime() + d.getTimezoneOffset() * -60000);
+    currentDate = local.toISOString().split('T')[0];
   } else {
-    currentDate = raw; // already YYYY-MM-DD
+    // Fallback: try parsing the raw value
+    const raw = input.value;
+    if (raw.includes('/')) {
+      const p = raw.split('/');
+      currentDate = p.length === 3 ? `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}` : raw;
+    } else {
+      currentDate = raw;
+    }
   }
   document.getElementById('date-status').textContent = `Loading ${currentDate}...`;
   loadDateContent(currentDate);
@@ -126,7 +133,7 @@ function onDateChange() {
 
 async function loadDateContent(date) {
   const statusEl = document.getElementById('date-status');
-  statusEl.textContent = 'Loading...';
+  statusEl.textContent = 'Checking...';
   statusEl.style.color = '#94a3b8';
   try {
     const { data } = await sb.from('daily_content').select('*').eq('date', date).maybeSingle();
@@ -135,11 +142,11 @@ async function loadDateContent(date) {
       statusEl.style.color = '#059669';
       populateAllForms(data);
     } else {
-      statusEl.textContent = 'No content yet for this date';
+      statusEl.textContent = '📝 No content yet — add below';
       statusEl.style.color = '#94a3b8';
     }
   } catch(e) {
-    statusEl.textContent = 'Error loading: ' + e.message;
+    statusEl.textContent = 'Error: ' + e.message;
     statusEl.style.color = '#dc2626';
   }
   updateContentStatus();
@@ -157,7 +164,7 @@ function populateAllForms(data) {
         document.getElementById(`cw-wl${i+1}`).value = w.wordLengths || '';
       }
     });
-    cwPreview();
+    // cwPreview removed — auto-solver handles layout
   }
   // Quiz
   if (data.quiz_questions) {
@@ -183,6 +190,60 @@ function populateAllForms(data) {
     heroSelectedPlayer = data.wc_hero;
     showHeroSelectedCard(data.wc_hero);
     document.getElementById('hero-save-btn').disabled = false;
+  }
+  // Matches — rebuild match editor with saved data
+  if (data.matches?.length) {
+    const container = document.getElementById('matches-container');
+    container.innerHTML = '';
+    matchCount = 1;
+    data.matches.forEach(m => {
+      addMatch();
+      const n = matchCount - 1;
+      const setVal = (id, val) => { const el = document.getElementById(id); if (el && val !== null && val !== undefined) el.value = val; };
+      setVal(`m${n}-home`, m.home_team);
+      setVal(`m${n}-away`, m.away_team);
+      setVal(`m${n}-comp`, m.competition);
+      setVal(`m${n}-venue`, m.venue);
+      if (m.kickoff) setVal(`m${n}-time`, m.kickoff.slice(0,16));
+      if (m.home_result !== null && m.home_result !== undefined) setVal(`m${n}-home-result`, m.home_result);
+      if (m.away_result !== null && m.away_result !== undefined) setVal(`m${n}-away-result`, m.away_result);
+      setVal(`m${n}-home-scorers`, (m.home_actual_scorers||[]).join(', '));
+      setVal(`m${n}-away-scorers`, (m.away_actual_scorers||[]).join(', '));
+      // Finals mode
+      if (m.is_final) {
+        const cb = document.getElementById(`m${n}-final`);
+        if (cb) { cb.checked = true; toggleFinalFields(n); }
+        if (m.went_to_et !== null && m.went_to_et !== undefined) {
+          setVal(`m${n}-went-et`, m.went_to_et ? 'yes' : 'no');
+        }
+        if (m.went_to_pens !== null && m.went_to_pens !== undefined) {
+          setVal(`m${n}-went-pens`, m.went_to_pens ? 'yes' : 'no');
+        }
+      }
+      // Populate squads
+      ['home','away'].forEach(side => {
+        const squad = side === 'home' ? m.home_squad : m.away_squad;
+        const listId = `m${n}-${side}-players`;
+        const list = document.getElementById(listId);
+        if (!list || !squad?.length) return;
+        list.innerHTML = '';
+        squad.forEach(p => {
+          const div = document.createElement('div');
+          div.className = 'player-item';
+          div.innerHTML = `
+            <input type="text" value="${p.name}">
+            <select>
+              <option value="Forward" ${p.position==='Forward'?'selected':''}>FWD</option>
+              <option value="Midfielder" ${p.position==='Midfielder'?'selected':''}>MID</option>
+              <option value="Defender" ${p.position==='Defender'?'selected':''}>DEF</option>
+              <option value="Goalkeeper" ${p.position==='Goalkeeper'?'selected':''}>GK</option>
+            </select>
+            <button onclick="this.parentElement.remove()">×</button>
+          `;
+          list.appendChild(div);
+        });
+      });
+    });
   }
 }
 
