@@ -97,7 +97,6 @@ function checkAdminAuth() {
 
 // ── INIT ─────────────────────────────────────────────────
 function initAdmin() {
-  // Use local date (not UTC) to avoid off-by-one in IST timezone
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   document.getElementById('global-date').value = today;
@@ -107,6 +106,7 @@ function initAdmin() {
   loadDateContent(today);
   loadDashboardStats();
   loadSchedule();
+  updateContentStatus();
 }
 
 function onDateChange() {
@@ -958,22 +958,24 @@ function setSaveStatus(msg) {
 async function updateContentStatus() {
   const tbody = document.getElementById('content-status-tbody');
   if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="4" class="loading">Loading...</td></tr>';
   try {
     const { data } = await sb.from('daily_content').select('*').eq('date', currentDate).maybeSingle();
     const games = [
-      { name:'Crossword',       key:'crossword',       summary: data?.crossword ? '6 clues ready' : '—' },
-      { name:'Quiz',            key:'quiz_questions',  summary: data?.quiz_questions ? '5 questions' : '—' },
-      { name:'Super Predictor', key:'matches',         summary: data?.matches ? `${data.matches.length} match${data.matches.length===1?'':'es'}` : '—' },
-      { name:'Decode This',     key:'riddle',          summary: data?.riddle ? 'Riddle set' : '—' },
-      { name:'WC Heroes',       key:'wc_hero',         summary: data?.wc_hero ? data.wc_hero.display || data.wc_hero.name : '—' },
+      { name:'Crossword',       key:'crossword',      summary: data?.crossword && !data.crossword.draft ? '6 clues ready' : '—' },
+      { name:'Quiz',            key:'quiz_questions', summary: data?.quiz_questions ? '5 questions' : '—' },
+      { name:'Super Predictor', key:'matches',        summary: data?.matches ? `${data.matches.length} match${data.matches.length===1?'':'es'}` : '—' },
+      { name:'Decode This',     key:'riddle',         summary: data?.riddle ? 'Riddle set' : '—' },
+      { name:'WC Heroes',       key:'wc_hero',        summary: data?.wc_hero ? (data.wc_hero.firstName || data.wc_hero.name) : '—' },
     ];
     tbody.innerHTML = games.map(g => {
       const live = data?.[g.key];
       const pill = live ? `<span class="pill pill-live">Live</span>` : `<span class="pill pill-empty">Missing</span>`;
-      return `<tr><td>${g.name}</td><td>${pill}</td><td>${g.summary}</td><td><button class="edit-link" onclick="showPanel('${g.key==='quiz_questions'?'quiz':g.key==='wc_hero'?'heroes':g.key==='matches'?'predictor':g.key}',document.querySelector('.anav'))">Edit</button></td></tr>`;
+      const panelName = g.key==='quiz_questions'?'quiz':g.key==='wc_hero'?'heroes':g.key==='matches'?'predictor':g.key;
+      return `<tr><td>${g.name}</td><td>${pill}</td><td>${g.summary}</td><td><button class="edit-link" onclick="document.querySelector('.anav[onclick*=\\'${panelName}\\']')?.click()">Edit</button></td></tr>`;
     }).join('');
-  } catch {
-    tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-3);font-size:12px;padding:10px">No content yet for this date</td></tr>';
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="4" style="color:var(--text-3);font-size:12px;padding:10px">Error: ${e.message}</td></tr>`;
   }
 }
 
