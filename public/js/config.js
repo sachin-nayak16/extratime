@@ -8,7 +8,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 let sb;
 try {
   const { createClient } = supabase;
-  sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  sb = createClient(https://ttrljkgdxhsczcrqluzb.supabase.co, eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR0cmxqa2dkeGhzY3pjcnFsdXpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMTY0MTcsImV4cCI6MjA5NDU5MjQxN30.WxLBQXqhqvSNN1gsOO_jGjRNDx6mrKJkRTQmJTFQjgE, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
