@@ -77,71 +77,50 @@
       <!-- CROSSWORD -->
       <div class="apanel" id="apanel-crossword">
         <div class="apanel-title">Crossword builder</div>
-        <div class="apanel-sub">Enter 6 football answers and clues — the solver automatically figures out the best across/down arrangement and grid layout.</div>
+        <div class="apanel-sub">Place your words on the grid, then add clues.</div>
 
-        <div class="acard">
-          <div class="constraint-box">
-            <div class="constraint-title">How it works</div>
-            <ul class="constraint-list">
-              <li>Just enter 6 answers (no spaces) and their clues below</li>
-              <li>Click <strong>Auto-solve grid</strong> — the solver tries all combinations to find the best layout</li>
-              <li>It picks the arrangement with the most intersecting letters</li>
-              <li>Multi-word answers: write without spaces (e.g. JULESRIMET), use Word lengths for display (e.g. 5,5)</li>
-              <li>Tip: words with common letters like E, R, A, S, T intersect more easily</li>
-            </ul>
-          </div>
+        <!-- STEP 1: GRID CANVAS -->
+        <div id="cw-step1">
+          <div class="acard">
+            <div class="constraint-box">
+              <div class="constraint-title">How to use</div>
+              <ul class="constraint-list">
+                <li>Click any cell on the grid to start placing a word</li>
+                <li>Type the word — it places <strong>horizontally</strong> by default</li>
+                <li>Click the <strong>H/V toggle</strong> to switch between horizontal and vertical</li>
+                <li>Click a placed word to select and delete it</li>
+                <li>Multi-word answers (e.g. TONI KROOS): type without spaces as TONIKROOS</li>
+                <li>When happy with layout, click <strong>Done — add clues</strong></li>
+              </ul>
+            </div>
 
-          <div id="cw-words">
-            <div class="clue-block">
-              <div class="form-grid-3">
-                <div class="field"><label>Answer 1 <span class="req">*</span></label><input type="text" id="cw-a1" placeholder="e.g. MANDZUKIC" oninput="this.value=this.value.toUpperCase().replace(/\s/g,'')"></div>
-                <div class="field"><label>Word lengths <span class="hint">optional</span></label><input type="text" id="cw-wl1" placeholder="e.g. 9 or 5,5"></div>
+            <div class="cw-toolbar">
+              <div class="cw-dir-toggle">
+                <button class="cw-dir-btn active" id="dir-h" onclick="cwSetDir('H')">→ Horizontal</button>
+                <button class="cw-dir-btn" id="dir-v" onclick="cwSetDir('V')">↓ Vertical</button>
               </div>
-              <div class="field"><label>Clue 1 <span class="req">*</span></label><input type="text" id="cw-c1" placeholder="e.g. Goal-scorer in the 2018 WC Final"></div>
+              <button class="btn-w" onclick="cwClearAll()" style="font-size:11px;padding:5px 12px">Clear all</button>
             </div>
-            <div class="clue-block">
-              <div class="form-grid-3">
-                <div class="field"><label>Answer 2 <span class="req">*</span></label><input type="text" id="cw-a2" placeholder="e.g. JULESRIMET" oninput="this.value=this.value.toUpperCase().replace(/\s/g,'')"></div>
-                <div class="field"><label>Word lengths <span class="hint">optional</span></label><input type="text" id="cw-wl2" placeholder="e.g. 5,5"></div>
-              </div>
-              <div class="field"><label>Clue 2 <span class="req">*</span></label><input type="text" id="cw-c2" placeholder="e.g. Old FIFA WC Trophy named after him"></div>
-            </div>
-            <div class="clue-block">
-              <div class="form-grid-3">
-                <div class="field"><label>Answer 3 <span class="req">*</span></label><input type="text" id="cw-a3" placeholder="e.g. KLOSE" oninput="this.value=this.value.toUpperCase().replace(/\s/g,'')"></div>
-                <div class="field"><label>Word lengths <span class="hint">optional</span></label><input type="text" id="cw-wl3" placeholder="e.g. 5"></div>
-              </div>
-              <div class="field"><label>Clue 3 <span class="req">*</span></label><input type="text" id="cw-c3" placeholder="e.g. All-time WC top scorer"></div>
-            </div>
-            <div class="clue-block">
-              <div class="form-grid-3">
-                <div class="field"><label>Answer 4 <span class="req">*</span></label><input type="text" id="cw-a4" placeholder="e.g. METLIFE" oninput="this.value=this.value.toUpperCase().replace(/\s/g,'')"></div>
-                <div class="field"><label>Word lengths <span class="hint">optional</span></label><input type="text" id="cw-wl4" placeholder="e.g. 7"></div>
-              </div>
-              <div class="field"><label>Clue 4 <span class="req">*</span></label><input type="text" id="cw-c4" placeholder="e.g. Venue of 2026 WC Final"></div>
-            </div>
-            <div class="clue-block">
-              <div class="form-grid-3">
-                <div class="field"><label>Answer 5 <span class="req">*</span></label><input type="text" id="cw-a5" placeholder="e.g. RODRIGUEZ" oninput="this.value=this.value.toUpperCase().replace(/\s/g,'')"></div>
-                <div class="field"><label>Word lengths <span class="hint">optional</span></label><input type="text" id="cw-wl5" placeholder="e.g. 9"></div>
-              </div>
-              <div class="field"><label>Clue 5 <span class="req">*</span></label><input type="text" id="cw-c5" placeholder="e.g. 2014 Golden Boot winner"></div>
-            </div>
-            <div class="clue-block">
-              <div class="form-grid-3">
-                <div class="field"><label>Answer 6 <span class="req">*</span></label><input type="text" id="cw-a6" placeholder="e.g. MARACANA" oninput="this.value=this.value.toUpperCase().replace(/\s/g,'')"></div>
-                <div class="field"><label>Word lengths <span class="hint">optional</span></label><input type="text" id="cw-wl6" placeholder="e.g. 8"></div>
-              </div>
-              <div class="field"><label>Clue 6 <span class="req">*</span></label><input type="text" id="cw-c6" placeholder="e.g. Iconic 2014 WC Final stadium"></div>
-            </div>
-          </div>
 
-          <div class="validate-status" id="cw-status" style="display:none"></div>
-          <div class="btn-row">
-            <button class="btn-g" onclick="cwAutoSolve()">Auto-solve grid</button>
-            <button class="btn-w" onclick="saveCW(true)">Save as draft</button>
+            <div class="cw-canvas-wrap">
+              <div class="cw-grid-canvas" id="cw-canvas"></div>
+            </div>
+
+            <div class="cw-status" id="cw-canvas-status"></div>
+            <button class="btn-full" id="cw-done-btn" onclick="cwDone()" disabled>Done — add clues →</button>
           </div>
-          <button class="btn-full" id="cw-save-btn" onclick="saveCW(false)" disabled>Save crossword</button>
+        </div>
+
+        <!-- STEP 2: CLUES -->
+        <div id="cw-step2" style="display:none">
+          <div class="acard">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div class="acard-title">Add clues for each word</div>
+              <button class="btn-w" onclick="cwBackToGrid()" style="font-size:11px;padding:5px 12px">← Back to grid</button>
+            </div>
+            <div id="cw-clues-form"></div>
+            <button class="btn-full" onclick="cwSaveFromCanvas()">Save crossword</button>
+          </div>
         </div>
       </div>
 
