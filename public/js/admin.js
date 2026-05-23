@@ -286,35 +286,43 @@ function cwSetDir(dir) {
 }
 
 function cwCellClick(r, c) {
-  // If clicking a cell that's part of an existing word, offer to delete it
-  const existingWord = cwWords.find(w => {
+  const existingLetter = cwGetCell(r, c);
+  
+  // Find words that pass through this cell
+  const wordsHere = cwWords.filter(w => {
     if (w.dir === 'H') return w.row === r && c >= w.col && c < w.col + w.word.length;
     return w.col === c && r >= w.row && r < w.row + w.word.length;
   });
 
-  if (existingWord) {
-    if (confirm(`Delete "${existingWord.word}"?`)) {
-      cwWords = cwWords.filter(w => w !== existingWord);
+  // If there's a word here in the SAME direction as current dir, offer to delete it
+  const sameDir = wordsHere.filter(w => w.dir === cwDir);
+  if (sameDir.length > 0) {
+    if (confirm(`Delete "${sameDir[0].word}"?`)) {
+      cwWords = cwWords.filter(w => w !== sameDir[0]);
       cwRenderGrid();
     }
     return;
   }
 
-  // Show word input popup
-  cwShowWordInput(r, c);
+  // Otherwise — allow placing a new word (even if cell has a letter from perpendicular word)
+  cwShowWordInput(r, c, existingLetter);
 }
 
-function cwShowWordInput(r, c) {
-  // Remove existing popup
+function cwShowWordInput(r, c, existingLetter) {
   document.getElementById('cw-word-popup')?.remove();
+
+  const hint = existingLetter
+    ? `<div style="font-size:11px;color:#059669;margin-bottom:6px">💡 Cell already has letter <strong>${existingLetter}</strong> — your word must contain it at position ${cwDir === 'H' ? c - c + 1 : r - r + 1}</div>`
+    : '';
 
   const popup = document.createElement('div');
   popup.id = 'cw-word-popup';
   popup.className = 'cw-word-input';
   popup.innerHTML = `
-    <div style="font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:8px">
+    <div style="font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:6px">
       Place word at row ${r+1}, col ${c+1} — ${cwDir === 'H' ? '→ Horizontal' : '↓ Vertical'}
     </div>
+    ${hint}
     <input type="text" id="cw-word-inp" placeholder="TYPE WORD" maxlength="20"
       oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')"
       onkeydown="if(event.key==='Enter')cwConfirmWord(${r},${c});if(event.key==='Escape')document.getElementById('cw-word-popup')?.remove()">
