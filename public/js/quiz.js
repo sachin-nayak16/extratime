@@ -118,9 +118,11 @@ function submitAnswer() {
 
   const fb = document.getElementById('q-feedback');
   fb.className = 'q-feedback '+(correct?'ok':'bad');
+  const assistNudge = !correct && !qAssistUsed && qAssists > 0
+    ? `<br><small>💡 You had an Assist available — try using it next time!</small>` : '';
   fb.innerHTML = correct
     ? `✓ Correct! ${qAssistUsed?'No Assist earned (Assist was used).':'Assist earned! 🎯'}<br><small>${q.explanation}</small>`
-    : `✗ Not quite. The answer is <strong>${q.answer}</strong>.<br><small>${q.explanation}</small>`;
+    : `✗ Not quite. The answer is <strong>${q.answer}</strong>.<br><small>${q.explanation}</small>${assistNudge}`;
   fb.style.display='block';
 
   const isLast = qIdx === qData.length - 1;

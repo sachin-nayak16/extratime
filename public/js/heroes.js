@@ -284,7 +284,10 @@ function submitHeroGuess() {
   heroSelected = null;
 
   const classes = HEROES_KEYS.map(k => heroGetClass(k, guess[k], HEROES_TODAY[k]));
-  const values = HEROES_KEYS.map((k,i) => guess[k] + (classes[i]==='close' ? heroGetArrow(k, guess[k], HEROES_TODAY[k]) : ''));
+  const values = HEROES_KEYS.map((k,i) => {
+    const arrow = (classes[i]==='close' || classes[i]==='no') ? heroGetArrow(k, guess[k], HEROES_TODAY[k]) : '';
+    return guess[k] + arrow;
+  });
 
   heroRevealCells(catTds, classes, values, () => {
     heroRevealing = false;

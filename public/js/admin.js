@@ -821,7 +821,53 @@ async function loadDashboardStats() {
     const { data: scores } = await sb.from('leaderboard').select('total_score').eq('date', currentDate);
     const avg = scores?.length ? Math.round(scores.reduce((s,r) => s + r.total_score, 0) / scores.length) : 0;
     document.getElementById('ds-avg').textContent = avg;
+
+    // Load per-game stats
+    const { data: gameScores } = await sb.from('daily_scores').select('game,score,user_id').eq('date', currentDate);
+    if (gameScores?.length) {
+      renderGameStats(gameScores);
+    }
   } catch { /* silent fail */ }
+}
+
+function renderGameStats(scores) {
+  const existing = document.getElementById('game-stats-card');
+  if (existing) existing.remove();
+
+  const games = ['quiz','predictor','decode','heroes'];
+  const gameLabels = { quiz:'Quiz', predictor:'Super Predictor', decode:'Decode This', heroes:'WC Heroes' };
+
+  const card = document.createElement('div');
+  card.id = 'game-stats-card';
+  card.className = 'acard';
+  card.style.marginTop = '14px';
+
+  let html = `<div class="acard-title">Today's player activity</div>
+    <table class="status-table">
+      <thead><tr><th>Game</th><th>Players</th><th>Avg score</th><th>Top score</th></tr></thead>
+      <tbody>`;
+
+  games.forEach(game => {
+    const gameRows = scores.filter(s => s.game === game);
+    const numericScores = gameRows.map(s => typeof s.score === 'number' ? s.score : 0);
+    const players = gameRows.length;
+    const avg = players ? Math.round(numericScores.reduce((a,b)=>a+b,0)/players) : 0;
+    const top = players ? Math.max(...numericScores) : 0;
+    html += `<tr>
+      <td>${gameLabels[game]}</td>
+      <td>${players}</td>
+      <td>${players ? avg + ' pts' : '—'}</td>
+      <td>${players ? top + ' pts' : '—'}</td>
+    </tr>`;
+  });
+
+  // Crossword stats from user_streaks (win/loss not in daily_scores)
+  const { } = {};
+  html += `</tbody></table>`;
+  card.innerHTML = html;
+
+  const dashPanel = document.getElementById('apanel-dashboard');
+  dashPanel.appendChild(card);
 }
 
 async function loadSchedule() {
@@ -858,6 +904,11 @@ function showToast(msg) {
   t.textContent = msg;
   t.style.display = 'block';
   setTimeout(() => t.style.display = 'none', 3000);
+}
+
+function previewDate() {
+  const url = `${window.location.origin}/index.html?preview=${currentDate}`;
+  window.open(url, '_blank');
 }
 
 // ── BOOT ─────────────────────────────────────────────────
