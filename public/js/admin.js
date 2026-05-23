@@ -254,11 +254,305 @@ function showPanel(name, btn) {
   document.getElementById(`apanel-${name}`).classList.add('active');
   btn.classList.add('active');
   if (name === 'schedule') loadSchedule();
+  if (name === 'crossword') { initCWCanvas(); cwRenderGrid(); }
 }
 
-// ── CROSSWORD (AUTO-SOLVER) ───────────────────────────────
-// You just enter 6 answers + clues. The solver figures out
-// which are across/down and where they go on the grid.
+// ── CROSSWORD CANVAS BUILDER ──────────────────────────────
+const CW_ROWS = 20, CW_COLS = 20;
+let cwDir = 'H';
+let cwWords = [];
+let cwSelectedCell = null;
+
+function initCWCanvas() {
+  const canvas = document.getElementById('cw-canvas');
+  if (!canvas || canvas.children.length > 0) return;
+  canvas.innerHTML = '';
+  for (let r = 0; r < CW_ROWS; r++) {
+    for (let c = 0; c < CW_COLS; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cw-cell';
+      cell.dataset.r = r;
+      cell.dataset.c = c;
+      cell.onclick = () => cwCellClick(r, c);
+      canvas.appendChild(cell);
+    }
+  }
+}
+
+function cwSetDir(dir) {
+  cwDir = dir;
+  document.getElementById('dir-h').classList.toggle('active', dir === 'H');
+  document.getElementById('dir-v').classList.toggle('active', dir === 'V');
+}
+
+function cwCellClick(r, c) {
+  // If clicking a cell that's part of an existing word, offer to delete it
+  const existingWord = cwWords.find(w => {
+    if (w.dir === 'H') return w.row === r && c >= w.col && c < w.col + w.word.length;
+    return w.col === c && r >= w.row && r < w.row + w.word.length;
+  });
+
+  if (existingWord) {
+    if (confirm(`Delete "${existingWord.word}"?`)) {
+      cwWords = cwWords.filter(w => w !== existingWord);
+      cwRenderGrid();
+    }
+    return;
+  }
+
+  // Show word input popup
+  cwShowWordInput(r, c);
+}
+
+function cwShowWordInput(r, c) {
+  // Remove existing popup
+  document.getElementById('cw-word-popup')?.remove();
+
+  const popup = document.createElement('div');
+  popup.id = 'cw-word-popup';
+  popup.className = 'cw-word-input';
+  popup.innerHTML = `
+    <div style="font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:8px">
+      Place word at row ${r+1}, col ${c+1} — ${cwDir === 'H' ? '→ Horizontal' : '↓ Vertical'}
+    </div>
+    <input type="text" id="cw-word-inp" placeholder="TYPE WORD" maxlength="20"
+      oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')"
+      onkeydown="if(event.key==='Enter')cwConfirmWord(${r},${c});if(event.key==='Escape')document.getElementById('cw-word-popup')?.remove()">
+    <div class="cw-word-input-btns">
+      <button class="btn-g" style="flex:1" onclick="cwConfirmWord(${r},${c})">Place word</button>
+      <button class="btn-w" onclick="document.getElementById('cw-word-popup')?.remove()">Cancel</button>
+    </div>
+  `;
+  document.body.appendChild(popup);
+  setTimeout(() => document.getElementById('cw-word-inp')?.focus(), 50);
+}
+
+function cwConfirmWord(r, c) {
+  const word = document.getElementById('cw-word-inp')?.value?.trim()?.toUpperCase();
+  if (!word || word.length < 2) { showToast('Please type a word (min 2 letters)'); return; }
+
+  // Check it fits in grid
+  if (cwDir === 'H' && c + word.length > CW_COLS) {
+    showToast(`Word too long — only ${CW_COLS - c} columns available`); return;
+  }
+  if (cwDir === 'V' && r + word.length > CW_ROWS) {
+    showToast(`Word too long — only ${CW_ROWS - r} rows available`); return;
+  }
+
+  // Check for conflicts with existing words
+  for (let i = 0; i < word.length; i++) {
+    const wr = cwDir === 'H' ? r : r + i;
+    const wc = cwDir === 'H' ? c + i : c;
+    const existing = cwGetCell(wr, wc);
+    if (existing && existing !== word[i]) {
+      showToast(`Conflict at row ${wr+1}, col ${wc+1}: existing letter "${existing}" ≠ "${word[i]}"`);
+      return;
+    }
+  }
+
+  // Add word
+  cwWords.push({ word, row: r, col: c, dir: cwDir });
+  document.getElementById('cw-word-popup')?.remove();
+  cwRenderGrid();
+}
+
+function cwGetCell(r, c) {
+  // Returns the letter at r,c from any placed word, or null
+  for (const w of cwWords) {
+    if (w.dir === 'H' && w.row === r && c >= w.col && c < w.col + w.word.length) {
+      return w.word[c - w.col];
+    }
+    if (w.dir === 'V' && w.col === c && r >= w.row && r < w.row + w.word.length) {
+      return w.word[r - w.row];
+    }
+  }
+  return null;
+}
+
+function cwRenderGrid() {
+  // Clear all cells
+  document.querySelectorAll('.cw-cell').forEach(cell => {
+    cell.className = 'cw-cell';
+    cell.textContent = '';
+  });
+
+  // Fill in letters
+  cwWords.forEach(w => {
+    for (let i = 0; i < w.word.length; i++) {
+      const r = w.dir === 'H' ? w.row : w.row + i;
+      const c = w.dir === 'H' ? w.col + i : w.col;
+      const cell = document.querySelector(`.cw-cell[data-r="${r}"][data-c="${c}"]`);
+      if (cell) {
+        cell.classList.add('filled');
+        cell.textContent = w.word[i];
+      }
+    }
+  });
+
+  // Add word numbers
+  const numbered = cwGetNumberedWords();
+  numbered.forEach(({row, col, num}) => {
+    const cell = document.querySelector(`.cw-cell[data-r="${row}"][data-c="${col}"]`);
+    if (cell) {
+      const numEl = document.createElement('span');
+      numEl.className = 'cw-num';
+      numEl.textContent = num;
+      cell.insertBefore(numEl, cell.firstChild);
+    }
+  });
+
+  // Update status and done button
+  const status = document.getElementById('cw-canvas-status');
+  const doneBtn = document.getElementById('cw-done-btn');
+  if (cwWords.length === 0) {
+    status.textContent = 'Click any cell to place your first word';
+    doneBtn.disabled = true;
+  } else {
+    status.textContent = `${cwWords.length} word${cwWords.length===1?'':'s'} placed. Click a word to delete it.`;
+    doneBtn.disabled = cwWords.length < 2;
+  }
+}
+
+function cwGetNumberedWords() {
+  // Assign numbers to words in reading order (top-left to bottom-right)
+  const starts = new Map();
+  cwWords.forEach(w => {
+    const key = `${w.row},${w.col}`;
+    if (!starts.has(key)) starts.set(key, []);
+    starts.get(key).push(w);
+  });
+
+  const sortedKeys = [...starts.keys()].sort((a, b) => {
+    const [ar, ac] = a.split(',').map(Number);
+    const [br, bc] = b.split(',').map(Number);
+    return ar !== br ? ar - br : ac - bc;
+  });
+
+  let num = 1;
+  const result = [];
+  sortedKeys.forEach(key => {
+    const [row, col] = key.split(',').map(Number);
+    result.push({ row, col, num });
+    num++;
+  });
+  return result;
+}
+
+function cwClearAll() {
+  if (cwWords.length > 0 && !confirm('Clear all words?')) return;
+  cwWords = [];
+  cwRenderGrid();
+}
+
+function cwDone() {
+  if (cwWords.length < 2) { showToast('Place at least 2 words first.'); return; }
+
+  // Validate — check all intersections are correct
+  let conflicts = false;
+  const cellMap = new Map();
+  for (const w of cwWords) {
+    for (let i = 0; i < w.word.length; i++) {
+      const r = w.dir === 'H' ? w.row : w.row + i;
+      const c = w.dir === 'H' ? w.col + i : w.col;
+      const key = `${r},${c}`;
+      if (cellMap.has(key) && cellMap.get(key) !== w.word[i]) {
+        conflicts = true; break;
+      }
+      cellMap.set(key, w.word[i]);
+    }
+    if (conflicts) break;
+  }
+
+  if (conflicts) { showToast('There are letter conflicts on the grid. Please fix them first.'); return; }
+
+  // Build clues form
+  const numbered = cwGetNumberedWords();
+  const numMap = new Map(numbered.map(n => [`${n.row},${n.col}`, n.num]));
+
+  const form = document.getElementById('cw-clues-form');
+  form.innerHTML = '';
+
+  cwWords.forEach(w => {
+    const num = numMap.get(`${w.row},${w.col}`) || '?';
+    const dirLabel = w.dir === 'H' ? 'Across' : 'Down';
+    const div = document.createElement('div');
+    div.className = 'clue-block';
+    div.innerHTML = `
+      <div style="font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:8px">
+        ${num} ${dirLabel} — <span style="color:#059669;letter-spacing:1px">${w.word}</span>
+        <span style="font-size:10px;color:var(--text-3)">(${w.word.length} letters, row ${w.row+1}, col ${w.col+1})</span>
+      </div>
+      <div class="field"><label>Clue <span class="req">*</span></label>
+        <input type="text" id="cw-clue-${num}-${w.dir}" placeholder="Enter clue for ${w.word}..."
+          data-word="${w.word}" data-row="${w.row}" data-col="${w.col}" data-dir="${w.dir}" data-num="${num}">
+      </div>
+      <div class="field"><label>Word lengths <span class="hint">only if multi-word answer, e.g. 4,5 for TONIKROOS</span></label>
+        <input type="text" id="cw-wl-${num}-${w.dir}" placeholder="e.g. 4,5 or leave blank">
+      </div>
+    `;
+    form.appendChild(div);
+  });
+
+  document.getElementById('cw-step1').style.display = 'none';
+  document.getElementById('cw-step2').style.display = 'block';
+}
+
+function cwBackToGrid() {
+  document.getElementById('cw-step1').style.display = 'block';
+  document.getElementById('cw-step2').style.display = 'none';
+}
+
+async function cwSaveFromCanvas() {
+  const numbered = cwGetNumberedWords();
+  const numMap = new Map(numbered.map(n => [`${n.row},${n.col}`, n.num]));
+
+  const across = [], down = [];
+
+  for (const w of cwWords) {
+    const num = numMap.get(`${w.row},${w.col}`);
+    const clueEl = document.getElementById(`cw-clue-${num}-${w.dir}`);
+    const wlEl = document.getElementById(`cw-wl-${num}-${w.dir}`);
+    const clue = clueEl?.value?.trim();
+    if (!clue) { showToast(`Please add a clue for ${w.word}`); return; }
+
+    const wl = wlEl?.value?.trim() || null;
+    if (wl) {
+      const parts = wl.split(',').map(x => parseInt(x.trim())).filter(n => !isNaN(n));
+      if (parts.reduce((a,b)=>a+b,0) !== w.word.length) {
+        showToast(`Word length mismatch for ${w.word}: "${wl}" doesn't add up to ${w.word.length}`);
+        return;
+      }
+    }
+
+    const entry = {
+      number: num,
+      answer: w.word,
+      clue,
+      wordLengths: wl,
+      display: wl ? `(${wl})` : `(${w.word.length})`,
+    };
+
+    if (w.dir === 'H') {
+      entry.row = w.row;
+      entry.colStart = w.col;
+      across.push(entry);
+    } else {
+      entry.col = w.col;
+      entry.rowStart = w.row;
+      down.push(entry);
+    }
+  }
+
+  across.sort((a,b) => a.number - b.number);
+  down.sort((a,b) => a.number - b.number);
+
+  const crossword = { draft: false, across, down };
+  const ok = await upsertContent({ crossword });
+  if (ok) {
+    showToast('✅ Crossword saved!');
+    updateContentStatus();
+  }
+}
 
 let cwSolution = null; // stores the solved layout
 
