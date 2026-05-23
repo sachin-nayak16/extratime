@@ -258,3 +258,9 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 .btn-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:11px 16px;font-size:14px;font-weight:500;color:#3c4043;background:#fff;border:1px solid #dadce0;border-radius:var(--radius);cursor:pointer;font-family:inherit;transition:background .15s,box-shadow .15s}
 .btn-google:hover{background:#f8f9fa;box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .btn-google:active{background:#f1f3f4}
+
+/* WC HEROES PROMPT */
+.heroes-prompt{font-size:18px;font-weight:700;color:var(--text);text-align:center;margin:8px 0 14px;letter-spacing:-0.3px}
+
+/* CROSSWORD STATUS IN SCORE BAR */
+#sc-crossword{font-size:16px}
