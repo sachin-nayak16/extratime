@@ -72,24 +72,28 @@ function heroUpdateHL() {
   document.getElementById('legend-dd').querySelectorAll('.legend-opt').forEach((o,i) => o.classList.toggle('hl', i===heroHlIdx));
 }
 
+function normalise(str) {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
 function heroFilter() {
   heroHlIdx=-1; heroSelected=null;
   document.getElementById('heroes-submit').disabled=true;
-  const val = document.getElementById('legend-inp').value.toLowerCase().trim();
+  const val = normalise(document.getElementById('legend-inp').value.trim());
   const dd = document.getElementById('legend-dd');
   dd.innerHTML='';
-  if (!val) { dd.style.display='none'; return; }
+  if (!val || val.length < 2) { dd.style.display='none'; return; }
   heroFiltered = ALL_PLAYERS.filter(p =>
     !heroGuessed.has(p.name) &&
-    (p.name.toLowerCase().includes(val) || p.firstName.toLowerCase().includes(val) || p.country.toLowerCase().includes(val))
-  ).slice(0, 8);
+    (normalise(p.name).includes(val) || normalise(p.firstName).includes(val) || normalise(p.country).includes(val))
+  ).slice(0, 20);
   if (!heroFiltered.length) { dd.style.display='none'; return; }
-  dd.style.display='block';
+  dd.style.cssText = 'display:block;max-height:280px;overflow-y:auto;';
   heroFiltered.forEach(p => {
     const div = document.createElement('div');
     div.className = 'legend-opt';
     const same = p.firstName.toLowerCase() === p.name.toLowerCase();
-    div.innerHTML = `<div style="font-weight:500">${p.firstName}${same?'':` <span style="color:var(--text-3);font-weight:400">(${p.name})</span>`}</div><div class="legend-opt-sub">${p.country} · ${p.position}</div>`;
+    div.innerHTML = `<div style="font-weight:500">${p.firstName}${same?'':` <span style="color:var(--text-3);font-weight:400">(${p.name})</span>`}</div><div class="legend-opt-sub">${p.country} · ${p.position} · ${p.debutWC}</div>`;
     div.addEventListener('mousedown', e => { e.preventDefault(); heroPickPlayer(p); });
     dd.appendChild(div);
   });

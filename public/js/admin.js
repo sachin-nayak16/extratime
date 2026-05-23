@@ -677,15 +677,19 @@ async function saveDecode() {
 // ── WC HEROES ─────────────────────────────────────────────
 // Reuse ALL_PLAYERS from heroes.js — loaded before admin.js
 function heroAdminFilter() {
-  const val = document.getElementById('hero-search').value.toLowerCase().trim();
+  const raw = document.getElementById('hero-search').value.trim();
+  const val = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const dd = document.getElementById('hero-dd');
   dd.innerHTML = '';
-  if (!val) { dd.style.display = 'none'; return; }
+  if (!val || val.length < 2) { dd.style.display = 'none'; return; }
   const matches = (typeof ALL_PLAYERS !== 'undefined' ? ALL_PLAYERS : [])
-    .filter(p => p.name.toLowerCase().includes(val) || p.firstName.toLowerCase().includes(val) || p.country.toLowerCase().includes(val))
-    .slice(0, 8);
+    .filter(p => {
+      const n = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      return n(p.name).includes(val) || n(p.firstName).includes(val) || n(p.country).includes(val);
+    })
+    .slice(0, 20);
   if (!matches.length) { dd.style.display = 'none'; return; }
-  dd.style.display = 'block';
+  dd.style.cssText = 'display:block;max-height:280px;overflow-y:auto;';
   matches.forEach(p => {
     const div = document.createElement('div');
     div.className = 'hero-dd-opt';
