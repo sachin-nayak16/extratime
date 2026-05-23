@@ -1,21 +1,21 @@
 // ─── SUPABASE CONFIG ───────────────────────────────────────
 // Replace these with your actual Supabase project values
 // Found in: Supabase Dashboard → Project Settings → API
-const SUPABASE_URL = 'https://ttrljkgdxhsczcrqluzb.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR0cmxqa2dkeGhzY3pjcnFsdXpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMTY0MTcsImV4cCI6MjA5NDU5MjQxN30.WxLBQXqhqvSNN1gsOO_jGjRNDx6mrKJkRTQmJTFQjgE';
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
 
 // ─── INIT SUPABASE ─────────────────────────────────────────
 let sb;
 try {
   const { createClient } = supabase;
   sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storageKey: 'extratime-auth',
-  }
-});
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storageKey: 'extratime-auth',
+    }
+  });
 } catch(e) {
   console.error('Supabase failed to initialise:', e);
 }
@@ -82,9 +82,13 @@ function updateScoreDisplay() {
       }
     }
   });
-  const assists = state.assists ?? 0;
-  const el = document.getElementById('sc-assists');
-  if (el) el.textContent = assists;
+  // Crossword status — tick if solved, pending if played but not solved, — if not started
+  const cwEl = document.getElementById('sc-crossword');
+  if (cwEl) {
+    if (state.cw_solved) cwEl.textContent = '✓';
+    else if (state.cw_played) cwEl.textContent = '…';
+    else cwEl.textContent = '—';
+  }
   const totalEl = document.getElementById('sc-total');
   if (totalEl) totalEl.textContent = total;
 }

@@ -83,7 +83,6 @@ function renderQuestion() {
 
 function updateAssistDisplay() {
   document.getElementById('assist-count').textContent = qAssists;
-  document.getElementById('sc-assists').textContent = qAssists;
   const btn = document.getElementById('assist-btn');
   if (btn) btn.disabled = qAssists===0 || qAnswered || qAssistUsed;
 }

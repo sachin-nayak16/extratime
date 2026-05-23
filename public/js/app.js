@@ -126,7 +126,6 @@ function shareScore(game) {
 
   lines.push('');
   lines.push(`Total: ${state.score_quiz||0} + ${typeof state.score_pred==='number'?state.score_pred:0} pts`);
-  lines.push(`Assists: ${state.assists || 0} 🎯`);
 
   const text = lines.join('\n');
 
