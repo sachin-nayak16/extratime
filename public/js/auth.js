@@ -61,24 +61,39 @@ async function loadStreak(userId) {
 function showAuth() { document.getElementById('auth-modal').style.display = 'flex'; }
 function hideAuth() { document.getElementById('auth-modal').style.display = 'none'; }
 
-async function signIn() {
-  const email = document.getElementById('auth-email').value.trim();
-  const username = document.getElementById('auth-username').value.trim();
+async function signInWithGoogle() {
   const fb = document.getElementById('auth-fb');
   fb.style.display = 'none';
-  if (!email) { showFb(fb, 'err', 'Please enter your email address.'); return; }
   try {
-    const { error } = await sb.auth.signInWithOtp({
-      email,
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
       options: {
-        data: { username: username || email.split('@')[0] },
-        emailRedirectTo: window.location.origin,
+        redirectTo: window.location.origin,
       }
     });
     if (error) throw error;
-    showFb(fb, 'ok', '✓ Magic link sent! Check your email and click the link to sign in.');
   } catch(e) {
-    showFb(fb, 'err', 'Error: ' + e.message);
+    fb.className = 'fb err';
+    fb.textContent = 'Error: ' + e.message;
+    fb.style.display = 'block';
+  }
+}
+
+async function signIn() {
+  // Keep as fallback but not shown in UI
+  const email = document.getElementById('auth-email')?.value?.trim();
+  if (!email) return;
+  const fb = document.getElementById('auth-fb');
+  try {
+    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
+    if (error) throw error;
+    fb.className = 'fb ok';
+    fb.textContent = '✓ Magic link sent! Check your email.';
+    fb.style.display = 'block';
+  } catch(e) {
+    fb.className = 'fb err';
+    fb.textContent = 'Error: ' + e.message;
+    fb.style.display = 'block';
   }
 }
 
