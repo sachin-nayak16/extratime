@@ -39,6 +39,7 @@
         <label class="sidebar-label">Content date</label>
         <input type="date" id="global-date" class="date-picker" onchange="onDateChange()">
         <div class="date-status" id="date-status"></div>
+        <button class="preview-btn" onclick="previewDate()" title="Preview this date on the live site">👁 Preview date</button>
       </div>
       <nav class="admin-nav">
         <button class="anav active" onclick="showPanel('dashboard',this)">Dashboard</button>
@@ -237,10 +238,23 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="/js/config.js"></script>
 <script src="/js/heroes.js"></script>
 <script src="/js/cw-solver.js"></script>
+<script>
+// Verify Supabase loaded correctly before admin.js runs
+window.addEventListener('DOMContentLoaded', () => {
+  if (typeof sb === 'undefined') {
+    document.getElementById('login-screen').innerHTML = `
+      <div style="text-align:center;padding:40px;font-family:system-ui">
+        <p style="color:#dc2626;font-size:14px;margin-bottom:10px">⚠️ Could not connect to database.</p>
+        <p style="color:#64748b;font-size:12px">Check your Supabase URL and anon key in config.js, then refresh.</p>
+        <button onclick="location.reload()" style="margin-top:14px;padding:8px 16px;background:#059669;color:#fff;border:none;border-radius:6px;cursor:pointer">Retry</button>
+      </div>`;
+  }
+});
+</script>
 <script src="/js/admin.js"></script>
 </body>
 </html>
