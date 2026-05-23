@@ -842,7 +842,7 @@ function renderGameStats(scores) {
   card.className = 'acard';
   card.style.marginTop = '14px';
 
-  let html = `<div class="acard-title">Today's player activity</div>
+  let html = `<div class="acard-title">Today's player activity <span style="font-size:10px;font-weight:400;color:var(--text-3)">(signed-in users only)</span></div>
     <table class="status-table">
       <thead><tr><th>Game</th><th>Players</th><th>Avg score</th><th>Top score</th></tr></thead>
       <tbody>`;
