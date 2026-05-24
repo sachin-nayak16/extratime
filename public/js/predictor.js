@@ -331,9 +331,9 @@ function renderLockedPredictor(state) {
 
   html += `<p style="font-size:11px;color:var(--text-3)">Points awarded after the final whistle.</p></div>`;
 
-  // Prediction history
-  html += buildPredHistory();
+  // Prediction history — load from Supabase async
   container.innerHTML = html;
+  loadPredHistory(container);
 
   // Start countdowns for locked view
   data.forEach(p => {
@@ -433,6 +433,7 @@ function checkAndShowResultsForMatches(state, matches, isYesterday) {
     document.getElementById('sc-pred').textContent = totalPts + 'pts';
     updateScoreDisplay();
     saveScoreToDb('predictor', totalPts);
+    savePredictionScore(totalPts); // save score to predictions table
   }
 
   showResultPopup(totalPts, messages, isYesterday);
@@ -508,4 +509,90 @@ function buildPredHistory() {
 
   html += `</div>`;
   return html;
+}
+
+// ── PREDICTION HISTORY (SUPABASE) ────────────────────────
+async function loadPredHistory(container) {
+  const histDiv = document.createElement('div');
+  histDiv.id = 'pred-history-section';
+  histDiv.innerHTML = `<div style="font-size:12px;color:var(--text-3);margin-top:14px;padding:10px 0">Loading prediction history...</div>`;
+  container.appendChild(histDiv);
+
+  try {
+    const { data:{ user } } = await sb.auth.getUser();
+    if (!user) {
+      histDiv.innerHTML = `<div style="font-size:12px;color:var(--text-3);margin-top:14px">Sign in to see your full prediction history across devices.</div>`;
+      return;
+    }
+
+    const { data: preds } = await sb.from('predictions')
+      .select('date, predictions, score')
+      .eq('user_id', user.id)
+      .order('date', { ascending: false })
+      .limit(10);
+
+    if (!preds?.length) {
+      histDiv.innerHTML = `<div style="font-size:12px;color:var(--text-3);margin-top:14px">No prediction history yet — your future predictions will appear here.</div>`;
+      return;
+    }
+
+    const dates = preds.map(p => p.date);
+    const { data: contents } = await sb.from('daily_content').select('date, matches').in('date', dates);
+    const contentMap = {};
+    contents?.forEach(c => { contentMap[c.date] = c.matches || []; });
+
+    let html = `<div style="margin-top:16px">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">📋 Your prediction history</div>`;
+
+    preds.forEach(({ date, predictions: pData, score }) => {
+      const matches = contentMap[date] || [];
+      const dateLabel = new Date(date).toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short' });
+      const isToday = date === CONFIG.today;
+      const ptsColor = typeof score === 'number' && score > 0 ? '#059669' : 'var(--text-3)';
+      const ptsDisplay = typeof score === 'number' ? `${score} pts` : isToday ? '⏳ Pending' : '—';
+
+      html += `<div style="background:var(--bg-2);border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:12px;font-weight:600;color:var(--text)">${isToday ? '📌 Today' : dateLabel}</span>
+          <span style="font-size:13px;font-weight:700;color:${ptsColor}">${ptsDisplay}</span>
+        </div>`;
+
+      (pData || []).forEach(p => {
+        const m = matches.find(m => m.id === p.matchId);
+        const homeTeam = m?.home_team || 'Home';
+        const awayTeam = m?.away_team || 'Away';
+        const hasResult = m?.home_result !== null && m?.home_result !== undefined;
+        const actualScore = hasResult ? `${m.home_result}–${m.away_result}` : null;
+        const emoji = !hasResult ? '' : (p.home===m.home_result&&p.away===m.away_result) ? '✅' :
+          ((p.home>p.away?'H':p.away>p.home?'A':'D')===(m.home_result>m.away_result?'H':m.away_result>m.home_result?'A':'D')) ? '🟡' : '❌';
+
+        html += `<div style="margin-bottom:6px">
+          <div style="font-size:12px;color:var(--text);font-weight:500;margin-bottom:3px">${homeTeam} vs ${awayTeam}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--text-2)">
+            <span>🎯 Predicted: <strong>${p.home}–${p.away}</strong></span>
+            ${hasResult ? `<span>${emoji} Actual: <strong>${actualScore}</strong></span>` : '<span style="color:var(--text-3)">Result pending</span>'}
+          </div>
+          ${p.scorers?.length ? `<div style="font-size:11px;color:var(--text-3);margin-top:2px">Scorers: ${p.scorers.map(s=>s.name).join(', ')}</div>` : ''}
+        </div>`;
+      });
+      html += `</div>`;
+    });
+
+    html += `</div>`;
+    histDiv.innerHTML = html;
+
+  } catch {
+    // Fallback to localStorage
+    const lsHtml = buildPredHistory();
+    histDiv.innerHTML = lsHtml || '';
+  }
+}
+
+// Also update lockPredictions to save score field
+async function savePredictionScore(score) {
+  try {
+    const { data:{ user } } = await sb.auth.getUser();
+    if (!user) return;
+    await sb.from('predictions').update({ score }).eq('user_id', user.id).eq('date', CONFIG.today);
+  } catch {}
 }
