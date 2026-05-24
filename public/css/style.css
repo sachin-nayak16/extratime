@@ -18,13 +18,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 .user-pill{font-size:11px;color:#a7f3d0;display:flex;align-items:center}
 
 /* TABS */
-.tabs{display:flex;background:var(--bg-2);border-bottom:1px solid var(--border);overflow-x:auto;position:sticky;top:44px;z-index:99}
-.tab{flex:1;min-width:65px;padding:9px 4px;font-size:11px;font-weight:500;color:var(--text-2);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;text-align:center}
+.tabs{display:flex;background:var(--bg-2);border-bottom:1px solid var(--border);overflow-x:auto;position:sticky;top:44px;z-index:99;scrollbar-width:none;-ms-overflow-style:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;padding:9px 14px;font-size:12px;font-weight:500;color:var(--text-2);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;text-align:center}
 .tab.active{color:var(--green);border-bottom-color:var(--green)}
 
 /* SCORE BAR */
-.sbar{display:flex;gap:5px;padding:8px 12px;background:var(--bg-2);border-bottom:1px solid var(--border);overflow-x:auto}
-.sp{flex:1;min-width:50px;background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 4px;text-align:center}
+.sbar{display:flex;gap:4px;padding:6px 10px;background:var(--bg-2);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
+.sbar::-webkit-scrollbar{display:none}
+.sp{flex:0 0 auto;min-width:52px;background:var(--bg-3);border:0.5px solid var(--border);border-radius:var(--radius);padding:5px 4px;text-align:center}
 .sl{font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:1px}
 .sv{font-size:13px;font-weight:600;color:var(--text)}
 .sv.g{color:var(--green)}
@@ -264,3 +266,42 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 
 /* CROSSWORD STATUS IN SCORE BAR */
 #sc-crossword{font-size:16px}
+
+/* ── MOBILE FIXES ──────────────────────────────────── */
+@media (max-width: 600px) {
+  /* Header */
+  .hdr{padding:8px 12px}
+  .logo{font-size:18px}
+
+  /* Game panels */
+  .gpane{padding:12px}
+  .gtitle{font-size:16px}
+
+  /* Crossword — smaller cells on mobile */
+  #cw-grid{gap:1px}
+  .cw-cell-el{width:26px!important;height:26px!important;font-size:11px!important}
+
+  /* Score inputs — predictor */
+  .score-inp{width:52px;height:52px;font-size:20px}
+
+  /* Player buttons — wrap nicely */
+  .player-grid{gap:5px}
+  .player-btn{font-size:11px;padding:5px 8px}
+
+  /* WC Heroes table — scrollable */
+  .guess-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .guess-table th,.guess-table td{font-size:10px;padding:6px 5px;min-width:52px}
+  .col-header{font-size:9px}
+
+  /* Heroes prompt */
+  .heroes-prompt{font-size:15px}
+
+  /* Modal */
+  .modal{padding:20px 16px;margin:16px}
+
+  /* Leaderboard */
+  .lb-row{padding:10px 12px}
+
+  /* Coming soon banner */
+  .coming-soon-banner{flex-direction:column;gap:6px}
+}
