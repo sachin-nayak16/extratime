@@ -32,29 +32,25 @@ let countdownTimers = [];
 
 async function initPredictor(todayContent, yesterdayContent) {
   const state = getState();
-  const yesterdayState = (() => {
-    try {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const key = `et_state_${yesterday.toISOString().split('T')[0]}`;
-      return JSON.parse(localStorage.getItem(key)) || {};
-    } catch { return {}; }
-  })();
 
-  // Load today's matches
   try {
     predMatches = todayContent?.matches?.length ? todayContent.matches : SAMPLE_MATCHES;
   } catch { predMatches = SAMPLE_MATCHES; }
 
-  // Show yesterday's results if predictions were locked yesterday and results are in
-  if (yesterdayState.pred_locked && !yesterdayState.pred_result_shown) {
-    const yesterdayMatches = yesterdayContent?.matches || [];
-    if (yesterdayMatches.length) {
-      checkAndShowResultsForMatches(yesterdayState, yesterdayMatches, true);
+  if (yesterdayContent?.matches?.length) {
+    const yesterdayState = (() => {
+      try {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const key = `et_state_${yesterday.toISOString().split('T')[0]}`;
+        return JSON.parse(localStorage.getItem(key)) || {};
+      } catch { return {}; }
+    })();
+    if (yesterdayState.pred_locked && !yesterdayState.pred_result_shown) {
+      checkAndShowResultsForMatches(yesterdayState, yesterdayContent.matches, true);
     }
   }
 
-  // Check today's results
   if (state.pred_locked && !state.pred_result_shown) {
     checkAndShowResults(state);
   }
@@ -64,6 +60,10 @@ async function initPredictor(todayContent, yesterdayContent) {
   } else {
     renderMatches();
   }
+
+  // Always show history section below — signed in users see Supabase history
+  const container = document.getElementById('matches-container');
+  setTimeout(() => loadPredHistory(container), 500);
 }
 
 // ── RENDER OPEN MATCHES ───────────────────────────────────
@@ -153,6 +153,11 @@ function renderMatches() {
   note.style.cssText = 'font-size:10px;color:var(--text-3);text-align:center;margin-top:5px';
   note.textContent = 'Locks at kick-off · Points awarded after final whistle';
   container.appendChild(note);
+
+  // Show history below even in open state
+  const histWrap = document.createElement('div');
+  container.appendChild(histWrap);
+  loadPredHistory(histWrap);
 }
 
 // ── COUNTDOWN TIMER ───────────────────────────────────────
@@ -330,10 +335,7 @@ function renderLockedPredictor(state) {
   });
 
   html += `<p style="font-size:11px;color:var(--text-3)">Points awarded after the final whistle.</p></div>`;
-
-  // Prediction history — load from Supabase async
   container.innerHTML = html;
-  loadPredHistory(container);
 
   // Start countdowns for locked view
   data.forEach(p => {
