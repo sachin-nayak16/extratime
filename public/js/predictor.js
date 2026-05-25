@@ -33,16 +33,48 @@ let countdownTimers = [];
 async function initPredictor(todayContent, yesterdayContent) {
   const state = getState();
 
+  // Load ALL upcoming + recent matches across all dates
+  // Show matches where kickoff is in next 7 days or last 24h
   try {
-    predMatches = todayContent?.matches?.length ? todayContent.matches : SAMPLE_MATCHES;
-  } catch { predMatches = SAMPLE_MATCHES; }
+    const now = new Date();
+    const yesterday = new Date(now - 24*60*60*1000).toISOString().split('T')[0];
+    const nextWeek = new Date(now.getTime() + 7*24*60*60*1000).toISOString().split('T')[0];
 
+    const { data } = await sb.from('daily_content')
+      .select('date, matches')
+      .gte('date', yesterday)
+      .lte('date', nextWeek)
+      .not('matches', 'is', null);
+
+    // Flatten all matches from all dates, filter by kickoff time
+    const allMatches = [];
+    (data || []).forEach(row => {
+      (row.matches || []).forEach(m => {
+        if (m.kickoff) allMatches.push(m);
+      });
+    });
+
+    // Sort by kickoff time
+    allMatches.sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
+
+    // Show matches kicking off in next 7 days OR kicked off in last 24h
+    predMatches = allMatches.filter(m => {
+      const ko = new Date(m.kickoff);
+      const diffHours = (ko - now) / (1000 * 60 * 60);
+      return diffHours > -24 && diffHours < 7 * 24;
+    });
+
+    if (!predMatches.length) predMatches = SAMPLE_MATCHES;
+  } catch {
+    predMatches = todayContent?.matches?.length ? todayContent.matches : SAMPLE_MATCHES;
+  }
+
+  // Check yesterday's results
   if (yesterdayContent?.matches?.length) {
     const yesterdayState = (() => {
       try {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const key = `et_state_${yesterday.toISOString().split('T')[0]}`;
+        const yd = new Date(); yd.setDate(yd.getDate()-1);
+        const key = `et_state_${yd.toISOString().split('T')[0]}`;
         return JSON.parse(localStorage.getItem(key)) || {};
       } catch { return {}; }
     })();
@@ -51,17 +83,14 @@ async function initPredictor(todayContent, yesterdayContent) {
     }
   }
 
+  // Check today's results
   if (state.pred_locked && !state.pred_result_shown) {
     checkAndShowResults(state);
   }
 
-  if (state.pred_locked) {
-    renderLockedPredictor(state);
-  } else {
-    renderMatches();
-  }
+  renderMatches();
 
-  // Always show history section below — signed in users see Supabase history
+  // Always show history
   const container = document.getElementById('matches-container');
   setTimeout(() => loadPredHistory(container), 500);
 }
@@ -73,16 +102,30 @@ function renderMatches() {
   countdownTimers.forEach(t => clearInterval(t));
   countdownTimers = [];
 
+  const state = getState();
+  const lockedMatchIds = state.locked_match_ids || [];
+
   predMatches.forEach(match => {
-    predSelections[match.id] = { homeScore:1, awayScore:1, scorers:[], et:null, pens:null };
+    if (!predSelections[match.id]) {
+      predSelections[match.id] = { homeScore:1, awayScore:1, scorers:[], et:null, pens:null };
+    }
+
+    // Restore saved selection for this match if locked
+    const savedPred = (state.pred_data || []).find(p => p.matchId === match.id);
+    if (savedPred) {
+      predSelections[match.id] = { ...predSelections[match.id], ...savedPred };
+    }
 
     const kickoff = new Date(match.kickoff);
+    const isKickedOff = kickoff <= new Date();
+    const isLocked = lockedMatchIds.includes(match.id) || isKickedOff;
     const timeStr = kickoff.toLocaleString('en-IN', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
 
-    const mkBtns = (squad, side) => squad.map(p => {
+    const mkBtns = (squad) => (squad||[]).map(p => {
       const lbl = POS_LABEL[p.position] || '?';
       const cls = POS_CLS[p.position] || 'pos-M';
-      return `<button class="player-btn" onclick="toggleScorer(${match.id},'${p.name}','${p.position}',this)">
+      const sel = predSelections[match.id].scorers?.some(s => s.name === p.name);
+      return `<button class="player-btn${sel?' sel':''}" ${isLocked?'disabled':''} onclick="toggleScorer(${match.id},'${p.name}','${p.position}',this)">
         ${p.name}<span class="${cls} pos-badge">${lbl}</span>
       </button>`;
     }).join('');
@@ -98,67 +141,117 @@ function renderMatches() {
         <span class="vs-badge">vs</span>
         <span class="team-name">${match.away_team}</span>
       </div>
+      ${isLocked ? `
+      <div style="text-align:center;padding:8px 0">
+        <div style="font-size:26px;font-weight:700;color:var(--text)">${predSelections[match.id].homeScore ?? 1} — ${predSelections[match.id].awayScore ?? 1}</div>
+        <div style="font-size:11px;color:#059669;font-weight:500;margin-top:4px">✓ Prediction locked</div>
+      </div>` : `
       <div class="score-inputs">
-        <input class="score-inp" type="number" min="0" max="20" value="1" id="home-score-${match.id}"
+        <input class="score-inp" type="number" min="0" max="20" value="${predSelections[match.id].homeScore}" id="home-score-${match.id}"
           oninput="predSelections[${match.id}].homeScore=+this.value">
         <span class="score-dash">—</span>
-        <input class="score-inp" type="number" min="0" max="20" value="1" id="away-score-${match.id}"
+        <input class="score-inp" type="number" min="0" max="20" value="${predSelections[match.id].awayScore}" id="away-score-${match.id}"
           oninput="predSelections[${match.id}].awayScore=+this.value">
-      </div>
-      ${match.is_final ? `
+      </div>`}
+      ${match.is_final && !isLocked ? `
       <div class="final-predictions">
         <div class="final-pred-title">🏆 Finals bonus predictions <span class="final-pred-pts">+1 pt correct · −1 pt wrong</span></div>
         <div class="final-pred-row">
           <span class="final-pred-label">Will this go to Extra Time?</span>
           <div class="final-pred-btns">
-            <button class="final-btn" id="et-yes-${match.id}" onclick="setFinalPred(${match.id},'et','yes',this)">Yes</button>
-            <button class="final-btn" id="et-no-${match.id}" onclick="setFinalPred(${match.id},'et','no',this)">No</button>
+            <button class="final-btn${predSelections[match.id].et==='yes'?' final-btn-sel':''}" onclick="setFinalPred(${match.id},'et','yes',this)">Yes</button>
+            <button class="final-btn${predSelections[match.id].et==='no'?' final-btn-sel':''}" onclick="setFinalPred(${match.id},'et','no',this)">No</button>
           </div>
         </div>
-        <div class="final-pred-row" id="pens-row-${match.id}" style="display:none">
+        <div class="final-pred-row" id="pens-row-${match.id}" style="display:${predSelections[match.id].et==='yes'?'flex':'none'}">
           <span class="final-pred-label">Will this go to Penalties?</span>
           <div class="final-pred-btns">
-            <button class="final-btn" id="pens-yes-${match.id}" onclick="setFinalPred(${match.id},'pens','yes',this)">Yes</button>
-            <button class="final-btn" id="pens-no-${match.id}" onclick="setFinalPred(${match.id},'pens','no',this)">No</button>
+            <button class="final-btn${predSelections[match.id].pens==='yes'?' final-btn-sel':''}" onclick="setFinalPred(${match.id},'pens','yes',this)">Yes</button>
+            <button class="final-btn${predSelections[match.id].pens==='no'?' final-btn-sel':''}" onclick="setFinalPred(${match.id},'pens','no',this)">No</button>
           </div>
         </div>
       </div>` : ''}
-      <div class="scorer-note">🎯 Predict up to 3 goalscorers per team — regardless of your scoreline prediction</div>
+      ${!isLocked ? `<div class="scorer-note">🎯 Predict up to 3 goalscorers per team — regardless of your scoreline prediction</div>` : ''}
       <div class="scorer-section">
         <div class="scorer-label">Predict goalscorers</div>
         <div class="scorer-cols">
           <div>
             <div class="scorer-team-name">${match.home_team}</div>
-            <div class="player-grid">${mkBtns(match.home_squad,'home')}</div>
+            <div class="player-grid">${mkBtns(match.home_squad)}</div>
           </div>
           <div>
             <div class="scorer-team-name">${match.away_team}</div>
-            <div class="player-grid">${mkBtns(match.away_squad,'away')}</div>
+            <div class="player-grid">${mkBtns(match.away_squad)}</div>
           </div>
         </div>
       </div>
+      ${!isLocked ? `
+      <button class="btn-full" style="margin-top:10px" onclick="lockMatch(${match.id})">
+        Lock prediction for ${match.home_team} vs ${match.away_team}
+      </button>
+      <p style="font-size:10px;color:var(--text-3);text-align:center;margin-top:5px">Locks at kick-off · Points awarded after final whistle</p>
+      ` : ''}
     `;
     container.appendChild(div);
     startCountdown(match.id, kickoff);
   });
 
-  const lockBtn = document.createElement('button');
-  lockBtn.className = 'btn-full';
-  lockBtn.id = 'lock-btn';
-  lockBtn.textContent = 'Lock in predictions';
-  lockBtn.onclick = lockPredictions;
-  container.appendChild(lockBtn);
-
-  const note = document.createElement('p');
-  note.style.cssText = 'font-size:10px;color:var(--text-3);text-align:center;margin-top:5px';
-  note.textContent = 'Locks at kick-off · Points awarded after final whistle';
-  container.appendChild(note);
-
-  // Show history below even in open state
+  // Show history below
   const histWrap = document.createElement('div');
   container.appendChild(histWrap);
   loadPredHistory(histWrap);
 }
+
+async function lockMatch(matchId) {
+  const state = getState();
+  const lockedMatchIds = [...(state.locked_match_ids || [])];
+  if (lockedMatchIds.includes(matchId)) return;
+
+  const pred = {
+    matchId,
+    home: predSelections[matchId]?.homeScore ?? 1,
+    away: predSelections[matchId]?.awayScore ?? 1,
+    scorers: predSelections[matchId]?.scorers ?? [],
+    et: predSelections[matchId]?.et ?? null,
+    pens: predSelections[matchId]?.pens ?? null,
+  };
+
+  const allPreds = [...(state.pred_data || [])];
+  const existingIdx = allPreds.findIndex(p => p.matchId === matchId);
+  if (existingIdx >= 0) allPreds[existingIdx] = pred;
+  else allPreds.push(pred);
+
+  lockedMatchIds.push(matchId);
+  const allLocked = lockedMatchIds.length >= predMatches.length;
+
+  saveState({
+    pred_locked: allLocked,
+    locked_match_ids: lockedMatchIds,
+    pred_data: allPreds,
+    score_pred: 'Locked',
+  });
+
+  if (allLocked) {
+    document.getElementById('sc-pred').textContent = 'Locked';
+    updateScoreDisplay();
+  }
+
+  // Save to Supabase
+  try {
+    const { data:{ user } } = await sb.auth.getUser();
+    if (user) {
+      await sb.from('predictions').upsert({
+        user_id: user.id, date: CONFIG.today,
+        predictions: allPreds, created_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,date' });
+    }
+  } catch {}
+
+  const match = predMatches.find(m => m.id === matchId);
+  showPredToast(`✅ Locked: ${match?.home_team} vs ${match?.away_team}`);
+  renderMatches();
+}
+
 
 // ── COUNTDOWN TIMER ───────────────────────────────────────
 function startCountdown(matchId, kickoff) {
@@ -262,34 +355,6 @@ function showPredToast(msg) {
 }
 
 // ── LOCK PREDICTIONS ──────────────────────────────────────
-async function lockPredictions() {
-  const allPreds = predMatches.map(m => ({
-    matchId: m.id,
-    home: predSelections[m.id]?.homeScore ?? 1,
-    away: predSelections[m.id]?.awayScore ?? 1,
-    scorers: predSelections[m.id]?.scorers ?? [],
-    et: predSelections[m.id]?.et ?? null,
-    pens: predSelections[m.id]?.pens ?? null,
-  }));
-
-  saveState({ pred_locked:true, pred_data:allPreds, score_pred:'Locked' });
-
-  // Save to Supabase if signed in
-  try {
-    const { data:{ user } } = await sb.auth.getUser();
-    if (user) {
-      await sb.from('predictions').upsert({
-        user_id: user.id, date: CONFIG.today,
-        predictions: allPreds, created_at: new Date().toISOString(),
-      }, { onConflict: 'user_id,date' });
-    }
-  } catch {}
-
-  document.getElementById('sc-pred').textContent = 'Locked';
-  updateScoreDisplay();
-  renderLockedPredictor(getState());
-}
-
 // ── RENDER LOCKED STATE ───────────────────────────────────
 function renderLockedPredictor(state) {
   countdownTimers.forEach(t => clearInterval(t));

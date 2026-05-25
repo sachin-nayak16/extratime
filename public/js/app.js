@@ -57,7 +57,6 @@ function showContentBanners(content) {
   const checks = [
     { key:'crossword',      pane:'cw',     label:'Daily Crossword' },
     { key:'quiz_questions', pane:'quiz',   label:'Daily Quiz' },
-    { key:'matches',        pane:'pred',   label:'Super Predictor' },
     { key:'riddle',         pane:'decode', label:'Decode This' },
     { key:'wc_hero',        pane:'heroes', label:'WC Heroes' },
   ];
