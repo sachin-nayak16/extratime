@@ -1,8 +1,8 @@
 // ─── SUPABASE CONFIG ───────────────────────────────────────
 // Replace these with your actual Supabase project values
 // Found in: Supabase Dashboard → Project Settings → API
-const SUPABASE_URL = 'https://ttrljkgdxhsczcrqluzb.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR0cmxqa2dkeGhzY3pjcnFsdXpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMTY0MTcsImV4cCI6MjA5NDU5MjQxN30.WxLBQXqhqvSNN1gsOO_jGjRNDx6mrKJkRTQmJTFQjgE';
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
 
 // ─── INIT SUPABASE ─────────────────────────────────────────
 let sb;
@@ -131,4 +131,17 @@ function copyShareCard() {
   if (state.score_heroes !== undefined) text += `WC Heroes: ${state.score_heroes}pts\n`;
   text += `\n${CONFIG.siteUrl}`;
   navigator.clipboard.writeText(text).then(() => alert('Copied to clipboard!')).catch(() => alert('Copy failed — please copy manually.'));
+}
+
+// ── STREAK HELPER ─────────────────────────────────────────
+// Returns the streak value from yesterday's saved state for a given key
+// Used by all games to correctly compute consecutive day streaks
+function getPrevStreak(streakKey) {
+  try {
+    const yd = new Date();
+    yd.setDate(yd.getDate() - 1);
+    const ydStr = `${yd.getFullYear()}-${String(yd.getMonth()+1).padStart(2,'0')}-${String(yd.getDate()).padStart(2,'0')}`;
+    const ydState = JSON.parse(localStorage.getItem(`et_state_${ydStr}`)) || {};
+    return ydState[streakKey] || 0;
+  } catch { return 0; }
 }

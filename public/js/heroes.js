@@ -15,8 +15,21 @@ let heroGuesses=0, heroSelected=null, heroDone=false, heroRevealing=false;
 const heroGuessed = new Set();
 let heroFiltered=[], heroHlIdx=-1;
 
+function buildHeroStats(state) {
+  const el = document.getElementById('heroes-stats');
+  if (!el) return;
+  el.style.display = 'flex';
+  const played = state.heroes_played || 0;
+  const won = state.heroes_won || 0;
+  document.getElementById('hs-played').textContent = played;
+  document.getElementById('hs-win').textContent = played ? Math.round(won/played*100)+'%' : '0%';
+  document.getElementById('hs-streak').textContent = state.heroes_streak || 0;
+  document.getElementById('hs-best').textContent = state.heroes_best || 0;
+}
+
 async function initHeroes() {
   const state = getState();
+  buildHeroStats(state);
 
   // Load today's WC Hero from Supabase
   try {
@@ -142,6 +155,13 @@ function submitHeroGuess() {
   heroGuesses++;
   heroGuessed.add(heroSelected.name);
   const guess = heroSelected;
+  const state = getState();
+
+  // Track played on first guess
+  if (heroGuesses === 1 && !state.heroes_played_today) {
+    saveState({ heroes_played: (state.heroes_played||0) + 1, heroes_played_today: true });
+    buildHeroStats(getState());
+  }
 
   const tbody = document.getElementById('guess-body');
   const tr = document.createElement('tr');
@@ -181,7 +201,13 @@ function submitHeroGuess() {
     if (win) {
       heroDone = true;
       const pts = SCORING.heroes.formula(heroGuesses);
-      saveState({ heroes_done:true, heroes_guesses:heroGuesses, heroes_player:HEROES_TODAY.display, score_heroes:pts });
+      const curState = getState();
+      const played = curState.heroes_played || 1; // already incremented on first guess
+      const won = (curState.heroes_won||0) + 1;
+      const streak = getPrevStreak('heroes_streak') + 1;
+      const best = Math.max(curState.heroes_best||0, streak);
+      saveState({ heroes_done:true, heroes_guesses:heroGuesses, heroes_player:HEROES_TODAY.display, score_heroes:pts, heroes_played:played, heroes_won:won, heroes_streak:streak, heroes_best:best });
+      buildHeroStats(getState());
       saveScoreToDb('heroes', pts);
       document.getElementById('sc-heroes').textContent = pts + 'pts';
       updateScoreDisplay();
