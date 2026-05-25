@@ -62,7 +62,7 @@ function checkDecode() {
     const state = getState();
     const played = (state.decode_played||0) + 1;
     const won = (state.decode_won||0) + 1;
-    const streak = (state.decode_streak||0) + 1;
+    const streak = getPrevStreak('decode_streak') + 1;
     const best = Math.max(state.decode_best||0, streak);
     saveState({ decode_done:true, decode_answer:answer, decode_solved:true, decode_played:played, decode_won:won, decode_streak:streak, decode_best:best });
     buildDecodeStats(getState());

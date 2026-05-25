@@ -363,8 +363,9 @@ function checkCW() {
     const state = getState();
     const played = (state.cw_played||0)+1;
     const won = (state.cw_won||0)+1;
-    const streak = (state.cw_streak||0)+1;
-    const best = Math.max(state.cw_best||0, streak);
+
+    // Check yesterday's state to determine streak
+    const streak = getPrevStreak('cw_streak') + 1;    const best = Math.max(state.cw_best||0, streak);
     saveState({ cw_solved:true, cw_played:played, cw_won:won, cw_streak:streak, cw_best:best });
     buildCWStats(getState());
     saveScoreToDb('crossword', 'solved');
