@@ -298,3 +298,31 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
   .lb-row{padding:10px 12px}
   .coming-soon-banner{flex-direction:column;gap:6px}
 }
+
+/* ── PREDICTOR: MATCH OVERVIEW CARDS ──────────────────── */
+.match-overview-card{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:10px;position:relative;overflow:hidden;transition:border-color .15s}
+.match-overview-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent-pred),#fb923c)}
+.match-overview-card.is-locked::before{background:linear-gradient(90deg,var(--green),#4ade80)}
+.mc-meta{font-size:10px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.mc-comp{color:var(--accent-pred)}
+.is-locked .mc-comp{color:var(--green)}
+.mc-dot{color:var(--border-2)}
+.mc-venue{color:var(--text-3)}
+.mc-date{}
+.mc-teams{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.mc-team{font-size:16px;font-weight:800;color:#fff;letter-spacing:-.3px;max-width:42%}
+.mc-team.away{text-align:right}
+.mc-vs{font-size:11px;color:var(--text-3);font-weight:700;background:var(--bg-3);border:1px solid var(--border);border-radius:99px;padding:3px 10px}
+.mc-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.mc-predict-btn{font-size:12px;font-weight:700;color:#052e16;background:var(--green);border:none;border-radius:var(--radius);padding:8px 16px;cursor:pointer;white-space:nowrap;transition:background .15s}
+.mc-predict-btn:hover{background:var(--green-dark);color:#fff}
+.mc-locked-badge{font-size:12px;font-weight:700;color:var(--green);background:#052e16;border:1px solid #166534;border-radius:var(--radius);padding:6px 12px}
+
+/* ── PREDICTOR: BACK BUTTON ───────────────────────────── */
+.mc-back-btn{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--text-2);background:none;border:1px solid var(--border-2);border-radius:var(--radius);padding:7px 13px;cursor:pointer;margin-bottom:14px;transition:all .15s}
+.mc-back-btn:hover{color:var(--text);border-color:var(--text-3)}
+
+/* ── PREDICTOR: SQUAD GROUP BY POSITION ──────────────── */
+.squad-pos-group{margin-bottom:10px}
+.squad-pos-label{margin-bottom:5px}
+.squad-pos-pill{font-size:10px;padding:2px 8px;border-radius:99px;font-weight:700;display:inline-block}
