@@ -149,10 +149,10 @@ function renderMatches() {
     startCountdown(match.id, kickoff);
   });
 
-  // History below
+  // History below — append first, then populate
   const histWrap = document.createElement('div');
   container.appendChild(histWrap);
-  loadPredHistory(histWrap);
+  setTimeout(() => loadPredHistory(histWrap), 300);
 }
 
 // ── OPEN MATCH DETAIL (prediction view) ──────────────────
@@ -598,12 +598,10 @@ function showResultPopup(pts, messages, isYesterday=false) {
 function buildPredHistory() {
   const history = [];
 
-  // Scan localStorage for all past prediction states
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (!key?.startsWith('et_state_')) continue;
     const dateStr = key.replace('et_state_', '');
-    if (dateStr === CONFIG.today) continue; // skip today
     try {
       const state = JSON.parse(localStorage.getItem(key));
       if (!state?.pred_locked || !state?.pred_data?.length) continue;
@@ -613,28 +611,34 @@ function buildPredHistory() {
 
   if (!history.length) return '';
 
-  // Sort newest first
   history.sort((a, b) => b.date.localeCompare(a.date));
 
   let html = `<div style="margin-top:14px">
-    <div style="font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:8px">📋 Your prediction history</div>`;
+    <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">📋 Your prediction history</div>`;
 
   history.slice(0, 7).forEach(({ date, state }) => {
     const pts = state.score_pred;
-    const ptsDisplay = typeof pts === 'number' ? `${pts} pts` : state.pred_result_shown ? '0 pts' : 'Pending';
-    const ptsColor = typeof pts === 'number' && pts > 0 ? 'color:#059669;font-weight:600' : 'color:var(--text-3)';
+    const isToday = date === CONFIG.today;
+    const ptsDisplay = typeof pts === 'number' ? `${pts} pts` : isToday ? '⏳ Pending' : '—';
+    const ptsColor = typeof pts === 'number' && pts > 0 ? 'color:var(--green);font-weight:700' : 'color:var(--text-3)';
     const dateLabel = new Date(date).toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short' });
 
-    html += `<div style="background:var(--bg-2);border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:6px">
+    html += `<div style="background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <span style="font-size:11px;font-weight:600;color:var(--text)">${dateLabel}</span>
-        <span style="font-size:12px;${ptsColor}">${ptsDisplay}</span>
+        <span style="font-size:12px;font-weight:600;color:var(--text)">${isToday ? '📌 Today' : dateLabel}</span>
+        <span style="font-size:13px;${ptsColor}">${ptsDisplay}</span>
       </div>`;
 
     state.pred_data?.forEach(p => {
+      // Try to get team names from predMatches (works for today's matches)
+      const m = predMatches.find(m => m.id === p.matchId);
+      const homeTeam = m?.home_team || 'Home';
+      const awayTeam = m?.away_team || 'Away';
       const scorerNames = p.scorers?.map(s => `${s.name} (${POS_LABEL[s.position]||'?'})`).join(', ') || '—';
-      html += `<div style="font-size:11px;color:var(--text-2);margin-bottom:3px">
-        Predicted: <strong>${p.home}–${p.away}</strong> · Scorers: ${scorerNames}
+      html += `<div style="font-size:12px;color:var(--text-2);margin-bottom:4px">
+        <span style="font-weight:600;color:var(--text)">${homeTeam} vs ${awayTeam}</span>
+        · Predicted: <strong>${p.home}–${p.away}</strong>
+        ${p.scorers?.length ? `· Scorers: ${scorerNames}` : ''}
       </div>`;
     });
 

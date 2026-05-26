@@ -95,12 +95,20 @@ function updateScoreDisplay() {
 
 // ─── TAB SWITCHER ──────────────────────────────────────────
 function showTab(name, btn) {
+  sessionStorage.setItem('et_active_tab', name);
   document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById(`pane-${name}`).classList.add('active');
   btn.classList.add('active');
   if (name === 'cw') document.getElementById('hidden-inp').focus();
   if (name === 'lb') loadLeaderboard();
+}
+
+function restoreActiveTab() {
+  const saved = sessionStorage.getItem('et_active_tab');
+  if (!saved || saved === 'cw') return;
+  const btn = document.querySelector(`.tab[onclick*="'${saved}'"]`);
+  if (btn) showTab(saved, btn);
 }
 
 // ─── SHARE ─────────────────────────────────────────────────

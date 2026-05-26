@@ -50,6 +50,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (window.location.hash.includes('access_token')) {
     history.replaceState(null, '', window.location.pathname);
   }
+
+  // Restore the tab the user was on before refresh
+  restoreActiveTab();
 });
 
 // ── CONTENT BANNERS ────────────────────────────────────────
