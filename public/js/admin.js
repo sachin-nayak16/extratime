@@ -728,6 +728,25 @@ function toggleFinalFields(n) {
   if (fields) fields.style.display = cb?.checked ? 'block' : 'none';
 }
 
+function normalisePosition(raw) {
+  const pos = raw.trim();
+  // Exact Transfermarkt position names
+  const defenders = ['Centre-Back','Left-Back','Right-Back','Left Wingback','Right Wingback','Left Back','Right Back'];
+  const midfielders = ['Central Midfield','Defensive Midfield','Attacking Midfield','Left Midfield','Right Midfield'];
+  const forwards = ['Centre-Forward','Second Striker','Left Winger','Right Winger'];
+  if (defenders.some(d => d.toLowerCase() === pos.toLowerCase())) return 'Defender';
+  if (midfielders.some(m => m.toLowerCase() === pos.toLowerCase())) return 'Midfielder';
+  if (forwards.some(f => f.toLowerCase() === pos.toLowerCase())) return 'Forward';
+  if (pos.toLowerCase() === 'goalkeeper') return 'Goalkeeper';
+  // Fallback: loose keyword matching for generic inputs (e.g. "DEF", "MID", "FWD", "GK")
+  const p = pos.toLowerCase();
+  if (p.includes('mid')) return 'Midfielder';
+  if (p.includes('def') || p.includes('back') || p.includes('wing')) return 'Defender';
+  if (p.includes('goal') || p === 'gk') return 'Goalkeeper';
+  if (p.includes('fwd') || p.includes('for') || p.includes('strik') || p.includes('winger')) return 'Forward';
+  return 'Forward'; // final fallback
+}
+
 function importCSV(n, side) {
   const csvId = `m${n}-${side}-csv`;
   const listId = `m${n}-${side}-players`;
@@ -742,12 +761,8 @@ function importCSV(n, side) {
   lines.forEach(line => {
     const parts = line.split(',').map(s => s.trim());
     const name = parts[0];
-    const posRaw = (parts[1] || '').toLowerCase();
-    let position = 'Forward';
-    if (posRaw.includes('mid')) position = 'Midfielder';
-    else if (posRaw.includes('def')) position = 'Defender';
-    else if (posRaw.includes('goal') || posRaw.includes('gk')) position = 'Goalkeeper';
-    else if (posRaw.includes('fwd') || posRaw.includes('for')) position = 'Forward';
+    const posRaw = parts[1] || '';
+    let position = normalisePosition(posRaw);
     if (!name) return;
     const div = document.createElement('div');
     div.className = 'player-item';
