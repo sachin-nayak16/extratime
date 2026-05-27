@@ -231,15 +231,15 @@ function openMatchDetail(matchId) {
       <div class="final-pred-row">
         <span class="final-pred-label">Will this go to Extra Time?</span>
         <div class="final-pred-btns">
-          <button class="final-btn${predSelections[match.id].et==='yes'?' final-btn-sel':''}" onclick="setFinalPred(${match.id},'et','yes',this)">Yes</button>
-          <button class="final-btn${predSelections[match.id].et==='no'?' final-btn-sel':''}" onclick="setFinalPred(${match.id},'et','no',this)">No</button>
+          <button class="final-btn${predSelections[match.id].et==='yes'?' final-btn-sel':''}" id="et-yes-${match.id}" onclick="setFinalPred(${match.id},'et','yes',this)">Yes</button>
+          <button class="final-btn${predSelections[match.id].et==='no'?' final-btn-sel':''}" id="et-no-${match.id}" onclick="setFinalPred(${match.id},'et','no',this)">No</button>
         </div>
       </div>
       <div class="final-pred-row" id="pens-row-${match.id}" style="display:${predSelections[match.id].et==='yes'?'flex':'none'}">
         <span class="final-pred-label">Will this go to Penalties?</span>
         <div class="final-pred-btns">
-          <button class="final-btn${predSelections[match.id].pens==='yes'?' final-btn-sel':''}" onclick="setFinalPred(${match.id},'pens','yes',this)">Yes</button>
-          <button class="final-btn${predSelections[match.id].pens==='no'?' final-btn-sel':''}" onclick="setFinalPred(${match.id},'pens','no',this)">No</button>
+          <button class="final-btn${predSelections[match.id].pens==='yes'?' final-btn-sel':''}" id="pens-yes-${match.id}" onclick="setFinalPred(${match.id},'pens','yes',this)">Yes</button>
+          <button class="final-btn${predSelections[match.id].pens==='no'?' final-btn-sel':''}" id="pens-no-${match.id}" onclick="setFinalPred(${match.id},'pens','no',this)">No</button>
         </div>
       </div>
     </div>` : ''}
