@@ -121,7 +121,11 @@ function heroPickPlayer(p) {
   document.getElementById('heroes-submit').disabled = false;
 }
 
+function normaliseCountry(c) {
+  return (c === 'West Germany') ? 'Germany' : c;
+}
 function heroGetClass(key, gv, tv) {
+  if (key === 'country') return normaliseCountry(gv) === normaliseCountry(tv) ? 'ok' : 'no';
   if (gv===tv) return 'ok';
   if (typeof gv==='number' && typeof tv==='number' && Math.abs(gv-tv)<=2) return 'close';
   if (key==='appearances' && typeof gv==='number' && typeof tv==='number' && Math.abs(gv-tv)<=3) return 'close';
@@ -196,7 +200,7 @@ function submitHeroGuess() {
     document.getElementById('guess-count').textContent = `Guesses: ${heroGuesses}`;
 
     const win = guess.name === HEROES_TODAY.name ||
-      (guess.country === HEROES_TODAY.country && guess.debutWC === HEROES_TODAY.debutWC && guess.goals === HEROES_TODAY.goals);
+      (normaliseCountry(guess.country) === normaliseCountry(HEROES_TODAY.country) && guess.debutWC === HEROES_TODAY.debutWC && guess.goals === HEROES_TODAY.goals);
 
     if (win) {
       heroDone = true;
