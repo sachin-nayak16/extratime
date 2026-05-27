@@ -244,7 +244,7 @@ const ALL_PLAYERS=[
 {name:'Bamba Dieng',firstName:'Bamba Dieng',country:'Senegal',confederation:'CAF',position:'Forward',debutWC:2022,editions:1,goals:1,appearances:4,born:2000,wcWinner:'No'},
 {name:'Bartosz Bereszyński',firstName:'Bartosz Bereszyński',country:'Poland',confederation:'UEFA',position:'Defender',debutWC:2018,editions:2,goals:0,appearances:7,born:1992,wcWinner:'No'},
 {name:'Bartosz Bosacki',firstName:'Bartosz Bosacki',country:'Poland',confederation:'UEFA',position:'Defender',debutWC:2006,editions:1,goals:2,appearances:2,born:1975,wcWinner:'No'},
-{name:'Bastian Schweinsteiger',firstName:'Bastian Schweinsteiger',country:'Germany',confederation:'UEFA',position:'Defender',debutWC:2006,editions:3,goals:2,appearances:20,born:1984,wcWinner:'Yes'},
+{name:'Bastian Schweinsteiger',firstName:'Bastian Schweinsteiger',country:'Germany',confederation:'UEFA',position:'Midfielder',debutWC:2006,editions:3,goals:2,appearances:20,born:1984,wcWinner:'Yes'},
 {name:'Bauer',firstName:'Bauer',country:'Brazil',confederation:'CONMEBOL',position:'Midfielder',debutWC:1950,editions:2,goals:0,appearances:8,born:1925,wcWinner:'No'},
 {name:'Bebeto',firstName:'Bebeto',country:'Brazil',confederation:'CONMEBOL',position:'Forward',debutWC:1990,editions:3,goals:6,appearances:15,born:1964,wcWinner:'Yes'},
 {name:'Benedict Iroha',firstName:'Benedict Iroha',country:'Nigeria',confederation:'CAF',position:'Defender',debutWC:1994,editions:2,goals:0,appearances:2,born:1969,wcWinner:'No'},
