@@ -600,8 +600,11 @@ function buildPredHistory() {
     const dateStr = key.replace('et_state_', '');
     try {
       const state = JSON.parse(localStorage.getItem(key));
-      if (!state?.pred_locked || !state?.pred_data?.length) continue;
-      history.push({ date: dateStr, state });
+      if (!state?.pred_data?.length || !state?.locked_match_ids?.length) continue;
+      const lockedIds = state.locked_match_ids || [];
+      const lockedPreds = (state.pred_data || []).filter(p => lockedIds.includes(p.matchId));
+      if (!lockedPreds.length) continue;
+      history.push({ date: dateStr, state: { ...state, pred_data: lockedPreds } });
     } catch {}
   }
 
