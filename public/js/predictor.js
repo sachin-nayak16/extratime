@@ -89,10 +89,6 @@ async function initPredictor(todayContent, yesterdayContent) {
   }
 
   renderMatches();
-
-  // Always show history
-  const container = document.getElementById('matches-container');
-  setTimeout(() => loadPredHistory(container), 500);
 }
 
 // ── RENDER MATCH LIST (overview cards) ───────────────────
@@ -152,7 +148,7 @@ function renderMatches() {
   // History below — append first, then populate
   const histWrap = document.createElement('div');
   container.appendChild(histWrap);
-  setTimeout(() => loadPredHistory(histWrap), 300);
+  setTimeout(() => loadPredHistory(histWrap), 800);
 }
 
 // ── OPEN MATCH DETAIL (prediction view) ──────────────────
@@ -659,7 +655,8 @@ async function loadPredHistory(container) {
   try {
     const { data:{ user } } = await sb.auth.getUser();
     if (!user) {
-      histDiv.innerHTML = `<div style="font-size:12px;color:var(--text-3);margin-top:14px">Sign in to see your full prediction history across devices.</div>`;
+      const lsHtml = buildPredHistory();
+      histDiv.innerHTML = lsHtml || `<div style="font-size:12px;color:var(--text-3);margin-top:14px">No prediction history yet — your future predictions will appear here.</div>`;
       return;
     }
 
