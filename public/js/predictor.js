@@ -45,9 +45,15 @@ async function initPredictor(todayContent, yesterdayContent) {
       .not('matches', 'is', null);
 
     const allMatches = [];
+    const seen = new Set();
     (data || []).forEach(row => {
       (row.matches || []).forEach(m => {
-        if (m.kickoff) allMatches.push(m);
+        if (!m.kickoff) return;
+        // Deduplicate by home+away+kickoff
+        const key = `${m.home_team}|${m.away_team}|${m.kickoff}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        allMatches.push(m);
       });
     });
 

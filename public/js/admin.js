@@ -284,6 +284,7 @@ function showPanel(name, btn) {
   btn.classList.add('active');
   if (name === 'schedule') loadSchedule();
   if (name === 'crossword') { initCWCanvas(); cwRenderGrid(); }
+  if (name === 'predictor') loadPredictorAdmin();
 }
 
 // ── CROSSWORD CANVAS BUILDER ──────────────────────────────
@@ -667,6 +668,304 @@ function buildMatchEditor() {
   container.innerHTML = '';
   matchCount = 1;
   addMatch();
+}
+
+// ── PREDICTOR ADMIN ───────────────────────────────────────
+let adminMatches = []; // all matches across all dates: {match, date}
+let adminPredTab = 'upcoming';
+
+async function loadPredictorAdmin() {
+  const container = document.getElementById('matches-container');
+  container.innerHTML = '<p class="loading">Loading matches...</p>';
+
+  try {
+    const now = new Date();
+    const past = new Date(now.getTime() - 60*24*60*60*1000).toISOString().split('T')[0];
+    const future = new Date(now.getTime() + 30*24*60*60*1000).toISOString().split('T')[0];
+    const { data } = await sb.from('daily_content')
+      .select('date, matches')
+      .gte('date', past)
+      .lte('date', future)
+      .not('matches', 'is', null);
+
+    adminMatches = [];
+    const seen = new Set();
+    (data || []).forEach(row => {
+      (row.matches || []).forEach(m => {
+        // Deduplicate by home+away+kickoff key
+        const key = `${m.home_team}|${m.away_team}|${m.kickoff}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        adminMatches.push({ match: m, date: row.date });
+      });
+    });
+    adminMatches.sort((a, b) => new Date(a.match.kickoff) - new Date(b.match.kickoff));
+  } catch(e) {
+    adminMatches = [];
+  }
+
+  renderPredictorAdmin();
+}
+
+function renderPredictorAdmin() {
+  const container = document.getElementById('matches-container');
+  container.innerHTML = '';
+
+  const now = new Date();
+
+  const upcoming = adminMatches.filter(({match}) => !match.completed && new Date(match.kickoff) > now);
+  const live     = adminMatches.filter(({match}) => !match.completed && new Date(match.kickoff) <= now);
+  const completed = adminMatches.filter(({match}) => match.completed);
+
+  // Tab bar
+  const tabs = document.createElement('div');
+  tabs.style.cssText = 'display:flex;gap:4px;margin-bottom:14px';
+  ['upcoming','live','completed'].forEach(tab => {
+    const counts = {upcoming: upcoming.length, live: live.length, completed: completed.length};
+    const labels = {upcoming:'Upcoming', live:'Live / Needs result', completed:'Completed'};
+    const btn = document.createElement('button');
+    btn.className = 'add-player-btn' + (adminPredTab === tab ? ' active-tab' : '');
+    btn.style.cssText = adminPredTab === tab
+      ? 'background:#059669;color:#fff;border-color:#059669;font-weight:700'
+      : '';
+    btn.textContent = `${labels[tab]} (${counts[tab]})`;
+    btn.onclick = () => { adminPredTab = tab; renderPredictorAdmin(); };
+    tabs.appendChild(btn);
+  });
+  container.appendChild(tabs);
+
+  const list = adminPredTab === 'upcoming' ? upcoming
+             : adminPredTab === 'live' ? live
+             : completed;
+
+  if (!list.length) {
+    const empty = document.createElement('p');
+    empty.style.cssText = 'font-size:12px;color:#94a3b8;padding:12px 0';
+    empty.textContent = adminPredTab === 'upcoming' ? 'No upcoming matches. Add one below.'
+                      : adminPredTab === 'live' ? 'No live matches needing results.'
+                      : 'No completed matches yet.';
+    container.appendChild(empty);
+  } else {
+    list.forEach(({match, date}) => renderAdminMatchCard(container, match, date));
+  }
+
+  // Add new match form always shown at bottom
+  const addSection = document.createElement('div');
+  addSection.style.cssText = 'margin-top:16px;border-top:1px solid #e2e8f0;padding-top:14px';
+  addSection.innerHTML = '<p style="font-size:12px;font-weight:600;color:#374151;margin-bottom:10px">➕ Add new match</p>';
+  container.appendChild(addSection);
+
+  const newMatchContainer = document.createElement('div');
+  newMatchContainer.id = 'new-match-container';
+  addSection.appendChild(newMatchContainer);
+  matchCount = 1;
+  addMatchTo(newMatchContainer);
+}
+
+function renderAdminMatchCard(container, match, date) {
+  const now = new Date();
+  const kickoff = match.kickoff ? new Date(match.kickoff) : null;
+  const dateStr = kickoff ? kickoff.toLocaleDateString('en-IN', {weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
+
+  const card = document.createElement('div');
+  card.className = 'match-block';
+  card.style.cssText = 'position:relative';
+
+  const hasResult = match.home_result !== null && match.home_result !== undefined
+    && match.away_result !== null && match.away_result !== undefined;
+
+  card.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div>
+        <span style="font-size:14px;font-weight:700;color:#111">${match.home_team} vs ${match.away_team}</span>
+        <span style="font-size:11px;color:#94a3b8;margin-left:8px">${match.competition || ''} · ${dateStr}</span>
+        ${hasResult ? `<span style="font-size:12px;font-weight:700;color:#059669;margin-left:8px">FT: ${match.home_result}–${match.away_result}</span>` : ''}
+      </div>
+      <span style="font-size:10px;color:#94a3b8">stored in ${date}</span>
+    </div>
+    <div class="form-grid" style="margin-bottom:10px">
+      <div class="field">
+        <label>Actual result</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="number" min="0" max="20" placeholder="—" value="${match.home_result ?? ''}" id="res-home-${match.id}-${date}" style="width:60px;text-align:center">
+          <span>—</span>
+          <input type="number" min="0" max="20" placeholder="—" value="${match.away_result ?? ''}" id="res-away-${match.id}-${date}" style="width:60px;text-align:center">
+        </div>
+      </div>
+      <div class="field">
+        <label>Home goalscorers <span class="hint">(comma separated)</span></label>
+        <input type="text" id="res-hscorers-${match.id}-${date}" value="${(match.home_actual_scorers||[]).join(', ')}" placeholder="e.g. Haaland, Foden">
+      </div>
+      <div class="field">
+        <label>Away goalscorers</label>
+        <input type="text" id="res-ascorers-${match.id}-${date}" value="${(match.away_actual_scorers||[]).join(', ')}" placeholder="e.g. Palmer, Jackson">
+      </div>
+    </div>
+    ${match.is_final ? `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div class="field"><label>Did it go to Extra Time?</label>
+        <select id="res-et-${match.id}-${date}">
+          <option value="">Not yet</option>
+          <option value="yes" ${match.went_to_et===true?'selected':''}>Yes</option>
+          <option value="no" ${match.went_to_et===false?'selected':''}>No</option>
+        </select>
+      </div>
+      <div class="field"><label>Did it go to Penalties?</label>
+        <select id="res-pens-${match.id}-${date}">
+          <option value="">Not yet</option>
+          <option value="yes" ${match.went_to_pens===true?'selected':''}>Yes</option>
+          <option value="no" ${match.went_to_pens===false?'selected':''}>No</option>
+        </select>
+      </div>
+    </div>` : ''}
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <input type="checkbox" id="res-completed-${match.id}-${date}" ${match.completed?'checked':''} style="width:16px;height:16px;accent-color:#059669">
+      <label for="res-completed-${match.id}-${date}" style="font-size:12px;font-weight:600;color:#374151;cursor:pointer">✅ Mark as completed</label>
+    </div>
+    <button class="btn-g" style="font-size:12px;padding:8px 16px" onclick="saveMatchResult('${match.id}','${date}')">Save result</button>
+  `;
+  container.appendChild(card);
+}
+
+async function saveMatchResult(matchId, date) {
+  // Load existing row for that date
+  const { data: row } = await sb.from('daily_content').select('matches').eq('date', date).maybeSingle();
+  if (!row?.matches) { showToast('Could not find match data for ' + date); return; }
+
+  const idNum = parseInt(matchId);
+  const updated = row.matches.map(m => {
+    if (m.id !== idNum) return m;
+    const hr = parseInt(document.getElementById(`res-home-${matchId}-${date}`)?.value);
+    const ar = parseInt(document.getElementById(`res-away-${matchId}-${date}`)?.value);
+    const etEl = document.getElementById(`res-et-${matchId}-${date}`);
+    const pensEl = document.getElementById(`res-pens-${matchId}-${date}`);
+    return {
+      ...m,
+      home_result: isNaN(hr) ? null : hr,
+      away_result: isNaN(ar) ? null : ar,
+      home_actual_scorers: (document.getElementById(`res-hscorers-${matchId}-${date}`)?.value||'').split(',').map(s=>s.trim()).filter(Boolean),
+      away_actual_scorers: (document.getElementById(`res-ascorers-${matchId}-${date}`)?.value||'').split(',').map(s=>s.trim()).filter(Boolean),
+      went_to_et: etEl ? (etEl.value === 'yes' ? true : etEl.value === 'no' ? false : null) : m.went_to_et,
+      went_to_pens: pensEl ? (pensEl.value === 'yes' ? true : pensEl.value === 'no' ? false : null) : m.went_to_pens,
+      completed: document.getElementById(`res-completed-${matchId}-${date}`)?.checked || false,
+    };
+  });
+
+  const ok = await upsertContentForDate(date, { matches: updated });
+  if (ok) { showToast('✅ Match updated!'); loadPredictorAdmin(); }
+}
+
+async function upsertContentForDate(date, updates) {
+  try {
+    const { data: existing } = await sb.from('daily_content').select('*').eq('date', date).maybeSingle();
+    const payload = { ...(existing || {}), ...updates, date };
+    const { error } = await sb.from('daily_content').upsert(payload, { onConflict: 'date' });
+    if (error) throw error;
+    return true;
+  } catch(e) { showToast('Error: ' + e.message); return false; }
+}
+
+async function saveNewMatch() {
+  const n = 1; // always match 1 in the new-match form
+  const home = document.getElementById(`m${n}-home`)?.value?.trim();
+  const away = document.getElementById(`m${n}-away`)?.value?.trim();
+  if (!home || !away) { showToast('Please enter both team names.'); return; }
+
+  const getPlayers = (listId) => {
+    const items = document.getElementById(listId)?.querySelectorAll('.player-item') || [];
+    return Array.from(items).map(item => ({
+      name: item.querySelector('input[type=text]')?.value?.trim() || '',
+      position: item.querySelector('select')?.value || 'Forward',
+    })).filter(p => p.name);
+  };
+
+  // Use kickoff date as the storage date, fallback to today
+  const kickoffVal = document.getElementById(`m${n}-time`)?.value;
+  const storageDate = kickoffVal ? kickoffVal.split('T')[0] : currentDate;
+
+  // Load existing matches for that date to avoid overwriting
+  const { data: existing } = await sb.from('daily_content').select('matches').eq('date', storageDate).maybeSingle();
+  const existingMatches = existing?.matches || [];
+  const newId = existingMatches.length ? Math.max(...existingMatches.map(m => m.id || 0)) + 1 : 1;
+
+  const newMatch = {
+    id: newId,
+    home_team: home,
+    away_team: away,
+    kickoff: kickoffVal || null,
+    competition: document.getElementById(`m${n}-comp`)?.value?.trim() || '',
+    venue: document.getElementById(`m${n}-venue`)?.value?.trim() || '',
+    home_squad: getPlayers(`m${n}-home-players`),
+    away_squad: getPlayers(`m${n}-away-players`),
+    home_result: null, away_result: null,
+    home_actual_scorers: [], away_actual_scorers: [],
+    is_final: document.getElementById(`m${n}-final`)?.checked || false,
+    completed: false,
+  };
+
+  const ok = await upsertContentForDate(storageDate, { matches: [...existingMatches, newMatch] });
+  if (ok) { showToast(`✅ Match added to ${storageDate}!`); loadPredictorAdmin(); }
+}
+
+function addMatchTo(container) {
+  const n = 1;
+  const div = document.createElement('div');
+  div.className = 'match-block';
+  div.id = `match-block-${n}`;
+  div.innerHTML = `
+    <div class="form-grid">
+      <div class="field"><label>Home team <span class="req">*</span></label>
+        <input type="text" id="m${n}-home" placeholder="e.g. Man City" oninput="teamAutocomplete('m${n}-home','m${n}-home-dd')" autocomplete="off">
+        <div class="hero-dd" id="m${n}-home-dd"></div>
+      </div>
+      <div class="field"><label>Away team <span class="req">*</span></label>
+        <input type="text" id="m${n}-away" placeholder="e.g. Chelsea" oninput="teamAutocomplete('m${n}-away','m${n}-away-dd')" autocomplete="off">
+        <div class="hero-dd" id="m${n}-away-dd"></div>
+      </div>
+      <div class="field"><label>Kick-off time</label><input type="datetime-local" id="m${n}-time"></div>
+      <div class="field"><label>Competition</label><input type="text" id="m${n}-comp" placeholder="e.g. Champions League Final"></div>
+      <div class="field"><label>Venue</label><input type="text" id="m${n}-venue" placeholder="e.g. Wembley"></div>
+      <div class="field" style="display:flex;align-items:center;gap:8px;padding-top:20px">
+        <input type="checkbox" id="m${n}-final" onchange="toggleFinalFields(${n})" style="width:16px;height:16px;accent-color:#059669">
+        <label style="font-size:12px;color:var(--text);text-transform:none;letter-spacing:0;cursor:pointer" for="m${n}-final">🏆 Finals mode (ET & Penalties predictions)</label>
+      </div>
+    </div>
+    <div id="m${n}-final-fields" style="display:none;background:#ecfdf5;border:0.5px solid #6ee7b7;border-radius:var(--radius);padding:12px;margin-bottom:12px">
+      <div class="acard-title" style="color:#065f46;margin-bottom:8px">Finals mode — ET & Penalties</div>
+    </div>
+    <div class="csv-import-box">
+      <div class="csv-title">📋 Paste squad CSV</div>
+      <div class="csv-sub">Format: one player per line — <code>Name, Position</code></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+        <div>
+          <div class="field" style="margin-bottom:4px"><label>Home squad CSV</label>
+            <textarea id="m${n}-home-csv" placeholder="Haaland, Forward&#10;De Bruyne, Midfielder" rows="4" style="font-size:11px;font-family:monospace"></textarea>
+          </div>
+          <button class="add-player-btn" onclick="importCSV(${n},'home')">Import home squad</button>
+        </div>
+        <div>
+          <div class="field" style="margin-bottom:4px"><label>Away squad CSV</label>
+            <textarea id="m${n}-away-csv" placeholder="Palmer, Midfielder&#10;Jackson, Forward" rows="4" style="font-size:11px;font-family:monospace"></textarea>
+          </div>
+          <button class="add-player-btn" onclick="importCSV(${n},'away')">Import away squad</button>
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
+      <div>
+        <div class="section-lbl" style="font-size:11px">Home squad</div>
+        <div class="player-list" id="m${n}-home-players"></div>
+        <button class="add-player-btn" onclick="addPlayer('m${n}-home-players')">+ Add home player</button>
+      </div>
+      <div>
+        <div class="section-lbl" style="font-size:11px">Away squad</div>
+        <div class="player-list" id="m${n}-away-players"></div>
+        <button class="add-player-btn" onclick="addPlayer('m${n}-away-players')">+ Add away player</button>
+      </div>
+    </div>
+    <button class="btn-g" style="margin-top:14px;font-size:12px;padding:10px 20px" onclick="saveNewMatch()">Save new match</button>
+  `;
+  container.appendChild(div);
 }
 
 function addMatch() {
