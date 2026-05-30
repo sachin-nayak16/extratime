@@ -99,9 +99,30 @@ async function initPredictor(todayContent, yesterdayContent) {
 }
 
 // ── RENDER COMPLETED MATCHES ─────────────────────────────
-function renderCompletedMatches(container) {
-  const state = getState();
+function getAllPredictions() {
+  // Scan all et_state_* keys and build a flat map of matchId -> {pred, isLocked, score}
+  const predMap = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key?.startsWith('et_state_')) continue;
+    try {
+      const s = JSON.parse(localStorage.getItem(key));
+      const lockedIds = s?.locked_match_ids || [];
+      (s?.pred_data || []).forEach(p => {
+        if (!predMap[p.matchId]) {
+          predMap[p.matchId] = {
+            pred: p,
+            isLocked: lockedIds.includes(p.matchId),
+            score: typeof s?.score_pred === 'number' ? s.score_pred : null,
+          };
+        }
+      });
+    } catch {}
+  }
+  return predMap;
+}
 
+function renderCompletedMatches(container) {
   if (!completedMatches.length) {
     const empty = document.createElement('div');
     empty.style.cssText = 'font-size:12px;color:var(--text-3);padding:20px 0;text-align:center';
@@ -110,12 +131,13 @@ function renderCompletedMatches(container) {
     return;
   }
 
+  const allPreds = getAllPredictions();
+
   // Show newest first
   [...completedMatches].reverse().forEach(match => {
-    const sel = predSelections[match.id] || {};
-    const savedPred = (state.pred_data || []).find(p => p.matchId === match.id);
-    const pred = savedPred || sel;
-    const isLocked = (state.locked_match_ids || []).includes(match.id);
+    const entry = allPreds[match.id];
+    const pred = entry?.pred;
+    const isLocked = entry?.isLocked || false;
 
     const hasResult = match.home_result !== null && match.home_result !== undefined
       && match.away_result !== null && match.away_result !== undefined;
@@ -124,8 +146,11 @@ function renderCompletedMatches(container) {
     const dateStr = kickoff.toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short' });
 
     let userPredHtml = '—';
-    if (isLocked && pred.home !== undefined) {
-      userPredHtml = `${pred.home ?? pred.homeScore}–${pred.away ?? pred.awayScore}`;
+    if (isLocked && pred) {
+      const h = pred.home ?? pred.homeScore;
+      const a = pred.away ?? pred.awayScore;
+      const scorers = pred.scorers?.map(s => s.name).join(', ');
+      userPredHtml = `${h}–${a}${scorers ? ` · ${scorers}` : ''}`;
     }
 
     const card = document.createElement('div');
@@ -144,7 +169,10 @@ function renderCompletedMatches(container) {
       <div class="mc-footer" style="justify-content:space-between">
         ${hasResult ? `<div style="font-size:13px;font-weight:800;color:#fff">${match.home_result} – ${match.away_result} <span style="font-size:10px;font-weight:500;color:var(--text-3)">FT</span></div>` : '<div style="font-size:11px;color:var(--text-3)">Result pending</div>'}
         ${isLocked
-          ? `<div style="font-size:11px;font-weight:600;color:var(--text-2)">Your prediction: <strong style="color:#fff">${userPredHtml}</strong></div>`
+          ? `<div style="font-size:11px;font-weight:600;color:var(--text-2)">
+               Your prediction: <strong style="color:#fff">${userPredHtml}</strong>
+               ${entry?.score !== null ? `<span style="margin-left:8px;color:var(--green);font-weight:700">${entry.score} pts</span>` : '<span style="margin-left:8px;color:var(--text-3)">(pending)</span>'}
+             </div>`
           : `<div style="font-size:11px;color:var(--text-3)">No prediction made</div>`}
       </div>
     `;
