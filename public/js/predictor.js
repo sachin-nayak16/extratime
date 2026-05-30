@@ -53,7 +53,7 @@ async function initPredictor(todayContent, yesterdayContent) {
         const key = `${m.home_team}|${m.away_team}|${m.kickoff}`;
         if (seen.has(key)) return;
         seen.add(key);
-        allMatches.push(m);
+        allMatches.push({ ...m, _date: row.date });
       });
     });
 
@@ -100,22 +100,23 @@ async function initPredictor(todayContent, yesterdayContent) {
 
 // ── RENDER COMPLETED MATCHES ─────────────────────────────
 function getAllPredictions() {
-  // Scan all et_state_* keys and build a flat map of matchId -> {pred, isLocked, score}
+  // Scan all et_state_* keys and build a map keyed by "date|matchId"
   const predMap = {};
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (!key?.startsWith('et_state_')) continue;
+    const date = key.replace('et_state_', '');
     try {
       const s = JSON.parse(localStorage.getItem(key));
       const lockedIds = s?.locked_match_ids || [];
+      const score = typeof s?.score_pred === 'number' ? s.score_pred : null;
       (s?.pred_data || []).forEach(p => {
-        if (!predMap[p.matchId]) {
-          predMap[p.matchId] = {
-            pred: p,
-            isLocked: lockedIds.includes(p.matchId),
-            score: typeof s?.score_pred === 'number' ? s.score_pred : null,
-          };
-        }
+        const mapKey = `${date}|${p.matchId}`;
+        predMap[mapKey] = {
+          pred: p,
+          isLocked: lockedIds.includes(p.matchId),
+          score,
+        };
       });
     } catch {}
   }
@@ -135,7 +136,8 @@ function renderCompletedMatches(container) {
 
   // Show newest first
   [...completedMatches].reverse().forEach(match => {
-    const entry = allPreds[match.id];
+    const matchDate = match._date || '';
+    const entry = allPreds[`${matchDate}|${match.id}`];
     const pred = entry?.pred;
     const isLocked = entry?.isLocked || false;
 
@@ -179,10 +181,6 @@ function renderCompletedMatches(container) {
     container.appendChild(card);
   });
 
-  // History below
-  const histWrap = document.createElement('div');
-  container.appendChild(histWrap);
-  setTimeout(() => loadPredHistory(histWrap), 800);
 }
 
 // ── RENDER MATCH LIST (overview cards) ───────────────────
@@ -265,10 +263,7 @@ function renderMatches() {
     startCountdown(match.id, kickoff);
   });
 
-  // History below — append first, then populate
-  const histWrap = document.createElement('div');
-  container.appendChild(histWrap);
-  setTimeout(() => loadPredHistory(histWrap), 800);
+
 }
 
 // ── OPEN MATCH DETAIL (prediction view) ──────────────────
