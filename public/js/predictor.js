@@ -100,12 +100,8 @@ async function initPredictor(todayContent, yesterdayContent) {
 
 // ── RENDER COMPLETED MATCHES ─────────────────────────────
 function getAllPredictions() {
-  // Scan all et_state_* keys. Each date's state also has locked_match_ids.
-  // We store all found predictions in an array, then for each completed match
-  // we find the entry where the match was actually locked on that date.
-  // Key insight: store alongside each pred the STATE DATE so we can match
-  // it to the Supabase row date where the match lives.
-  const allEntries = []; // [{stateDate, matchId, pred, isLocked, score}]
+  // Returns array of {stateDate, pred, isLocked, score}
+  const allEntries = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (!key?.startsWith('et_state_')) continue;
@@ -115,13 +111,7 @@ function getAllPredictions() {
       const lockedIds = s?.locked_match_ids || [];
       const score = typeof s?.score_pred === 'number' ? s.score_pred : null;
       (s?.pred_data || []).forEach(p => {
-        allEntries.push({
-          stateDate,
-          matchId: p.matchId,
-          pred: p,
-          isLocked: lockedIds.includes(p.matchId),
-          score,
-        });
+        allEntries.push({ stateDate, pred: p, isLocked: lockedIds.includes(p.matchId), score });
       });
     } catch {}
   }
@@ -141,19 +131,22 @@ function renderCompletedMatches(container) {
 
   // Show newest first
   [...completedMatches].reverse().forEach(match => {
-    // Find the locked prediction for this match.
-    // Match by: same matchId AND stateDate close to kickoff date (within 3 days),
-    // preferring locked entries. Falls back to any entry with matching id.
-    const kickoffDate = match.kickoff ? match.kickoff.split('T')[0] : match._date || '';
-    const kickoffMs = new Date(kickoffDate).getTime();
+    // Best match: same home_team + away_team (stored since latest fix)
+    // Fallback: closest stateDate to kickoff
+    const ht = (match.home_team || '').toLowerCase();
+    const at = (match.away_team || '').toLowerCase();
 
-    let entry = allPredEntries
-      .filter(e => e.matchId === match.id && e.isLocked)
-      .sort((a, b) => Math.abs(new Date(a.stateDate) - kickoffMs) - Math.abs(new Date(b.stateDate) - kickoffMs))[0];
+    let entry = allPredEntries.find(e =>
+      e.isLocked &&
+      (e.pred.home_team || '').toLowerCase() === ht &&
+      (e.pred.away_team || '').toLowerCase() === at
+    );
 
     if (!entry) {
+      // Older predictions without team names — match by kickoff proximity
+      const kickoffMs = new Date(match.kickoff || match._date).getTime();
       entry = allPredEntries
-        .filter(e => e.matchId === match.id)
+        .filter(e => e.isLocked && !e.pred.home_team)
         .sort((a, b) => Math.abs(new Date(a.stateDate) - kickoffMs) - Math.abs(new Date(b.stateDate) - kickoffMs))[0];
     }
 
@@ -192,7 +185,7 @@ function renderCompletedMatches(container) {
         ${isLocked
           ? `<div style="font-size:11px;font-weight:600;color:var(--text-2)">
                Your prediction: <strong style="color:#fff">${userPredHtml}</strong>
-               ${entry?.score !== null ? `<span style="margin-left:8px;color:var(--green);font-weight:700">${entry.score} pts</span>` : '<span style="margin-left:8px;color:var(--text-3)">(pending)</span>'}
+               ${entry?.score !== null && entry?.score !== undefined ? `<span style="margin-left:8px;color:var(--green);font-weight:700">+${entry.score} pts</span>` : '<span style="margin-left:8px;color:var(--text-3);font-weight:400">(scoring pending)</span>'}
              </div>`
           : `<div style="font-size:11px;color:var(--text-3)">No prediction made</div>`}
       </div>
@@ -403,8 +396,11 @@ async function lockMatch(matchId) {
   const lockedMatchIds = [...(state.locked_match_ids || [])];
   if (lockedMatchIds.includes(matchId)) return;
 
+  const matchObj = predMatches.find(m => m.id === matchId);
   const pred = {
     matchId,
+    home_team: matchObj?.home_team || '',
+    away_team: matchObj?.away_team || '',
     home: predSelections[matchId]?.homeScore ?? 1,
     away: predSelections[matchId]?.awayScore ?? 1,
     scorers: predSelections[matchId]?.scorers ?? [],
