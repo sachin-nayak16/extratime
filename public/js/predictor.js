@@ -26,27 +26,24 @@ const POS_LABEL = { Forward:'FWD', Midfielder:'MID', Defender:'DEF', Goalkeeper:
 const POS_CLS   = { Forward:'pos-F', Midfielder:'pos-M', Defender:'pos-D', Goalkeeper:'pos-GK' };
 const POS_PTS   = { Forward: SCORING.predictor.scorerForward, Midfielder: SCORING.predictor.scorerMidfielder, Defender: SCORING.predictor.scorerDefender, Goalkeeper: SCORING.predictor.scorerDefender };
 
-let predMatches = [];
+let predMatches = [], completedMatches = [];
 let predSelections = {};
 let countdownTimers = [];
 
 async function initPredictor(todayContent, yesterdayContent) {
   const state = getState();
 
-  // Load ALL upcoming + recent matches across all dates
-  // Show matches where kickoff is in next 7 days or last 24h
   try {
     const now = new Date();
-    const yesterday = new Date(now - 24*60*60*1000).toISOString().split('T')[0];
+    const thirtyDaysAgo = new Date(now.getTime() - 30*24*60*60*1000).toISOString().split('T')[0];
     const nextWeek = new Date(now.getTime() + 7*24*60*60*1000).toISOString().split('T')[0];
 
     const { data } = await sb.from('daily_content')
       .select('date, matches')
-      .gte('date', yesterday)
+      .gte('date', thirtyDaysAgo)
       .lte('date', nextWeek)
       .not('matches', 'is', null);
 
-    // Flatten all matches from all dates, filter by kickoff time
     const allMatches = [];
     (data || []).forEach(row => {
       (row.matches || []).forEach(m => {
@@ -54,19 +51,23 @@ async function initPredictor(todayContent, yesterdayContent) {
       });
     });
 
-    // Sort by kickoff time
     allMatches.sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
 
-    // Show matches kicking off in next 7 days OR kicked off in last 24h
+    // Completed = explicitly marked complete by admin
+    completedMatches = allMatches.filter(m => m.completed === true);
+
+    // Active = not completed, kickoff within next 7 days or last 24h
     predMatches = allMatches.filter(m => {
+      if (m.completed) return false;
       const ko = new Date(m.kickoff);
       const diffHours = (ko - now) / (1000 * 60 * 60);
       return diffHours > -24 && diffHours < 7 * 24;
     });
 
-    if (!predMatches.length) predMatches = SAMPLE_MATCHES;
+    if (!predMatches.length && !completedMatches.length) predMatches = SAMPLE_MATCHES;
   } catch {
     predMatches = todayContent?.matches?.length ? todayContent.matches : SAMPLE_MATCHES;
+    completedMatches = [];
   }
 
   // Check yesterday's results
@@ -91,12 +92,97 @@ async function initPredictor(todayContent, yesterdayContent) {
   renderMatches();
 }
 
+// ── RENDER COMPLETED MATCHES ─────────────────────────────
+function renderCompletedMatches(container) {
+  const state = getState();
+
+  if (!completedMatches.length) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'font-size:12px;color:var(--text-3);padding:20px 0;text-align:center';
+    empty.textContent = 'No completed matches yet.';
+    container.appendChild(empty);
+    return;
+  }
+
+  // Show newest first
+  [...completedMatches].reverse().forEach(match => {
+    const sel = predSelections[match.id] || {};
+    const savedPred = (state.pred_data || []).find(p => p.matchId === match.id);
+    const pred = savedPred || sel;
+    const isLocked = (state.locked_match_ids || []).includes(match.id);
+
+    const hasResult = match.home_result !== null && match.home_result !== undefined
+      && match.away_result !== null && match.away_result !== undefined;
+
+    const kickoff = new Date(match.kickoff);
+    const dateStr = kickoff.toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short' });
+
+    let userPredHtml = '—';
+    if (isLocked && pred.home !== undefined) {
+      userPredHtml = `${pred.home ?? pred.homeScore}–${pred.away ?? pred.awayScore}`;
+    }
+
+    const card = document.createElement('div');
+    card.className = 'match-overview-card is-completed';
+    card.innerHTML = `
+      <div class="mc-meta">
+        <span class="mc-comp" style="color:var(--text-3)">${match.competition}</span>
+        <span class="mc-dot">·</span>
+        <span class="mc-date">${dateStr}</span>
+      </div>
+      <div class="mc-teams">
+        <span class="mc-team home">${match.home_team}</span>
+        <span class="mc-vs">vs</span>
+        <span class="mc-team away">${match.away_team}</span>
+      </div>
+      <div class="mc-footer" style="justify-content:space-between">
+        ${hasResult ? `<div style="font-size:13px;font-weight:800;color:#fff">${match.home_result} – ${match.away_result} <span style="font-size:10px;font-weight:500;color:var(--text-3)">FT</span></div>` : '<div style="font-size:11px;color:var(--text-3)">Result pending</div>'}
+        ${isLocked
+          ? `<div style="font-size:11px;font-weight:600;color:var(--text-2)">Your prediction: <strong style="color:#fff">${userPredHtml}</strong></div>`
+          : `<div style="font-size:11px;color:var(--text-3)">No prediction made</div>`}
+      </div>
+    `;
+    container.appendChild(card);
+  });
+
+  // History below
+  const histWrap = document.createElement('div');
+  container.appendChild(histWrap);
+  setTimeout(() => loadPredHistory(histWrap), 800);
+}
+
 // ── RENDER MATCH LIST (overview cards) ───────────────────
+let predActiveTab = 'upcoming';
+
+function switchPredTab(tab) {
+  predActiveTab = tab;
+  renderMatches();
+}
+
 function renderMatches() {
   const container = document.getElementById('matches-container');
   container.innerHTML = '';
   countdownTimers.forEach(t => clearInterval(t));
   countdownTimers = [];
+
+  // Tab bar
+  const tabBar = document.createElement('div');
+  tabBar.className = 'pred-tabs';
+  tabBar.innerHTML = `
+    <button class="pred-tab ${predActiveTab==='upcoming'?'active':''}" onclick="switchPredTab('upcoming')">
+      Upcoming ${predMatches.length ? `<span class="pred-tab-count">${predMatches.length}</span>` : ''}
+    </button>
+    <button class="pred-tab ${predActiveTab==='past'?'active':''}" onclick="switchPredTab('past')">
+      Past ${completedMatches.length ? `<span class="pred-tab-count">${completedMatches.length}</span>` : ''}
+    </button>
+  `;
+  container.appendChild(tabBar);
+
+  if (predActiveTab === 'past') {
+    renderCompletedMatches(container);
+    return;
+  }
+
 
   const state = getState();
   const lockedMatchIds = state.locked_match_ids || [];

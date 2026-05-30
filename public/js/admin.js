@@ -144,6 +144,7 @@ async function loadDateContent(date) {
     } else {
       statusEl.textContent = '📝 No content yet — add below';
       statusEl.style.color = '#94a3b8';
+      clearAllForms();
     }
   } catch(e) {
     statusEl.textContent = 'Error: ' + e.message;
@@ -219,6 +220,8 @@ function populateAllForms(data) {
         if (m.went_to_pens !== null && m.went_to_pens !== undefined) {
           setVal(`m${n}-went-pens`, m.went_to_pens ? 'yes' : 'no');
         }
+        const completedCb = document.getElementById(`m${n}-completed`);
+        if (completedCb) completedCb.checked = m.completed || false;
       }
       // Populate squads
       ['home','away'].forEach(side => {
@@ -245,6 +248,32 @@ function populateAllForms(data) {
       });
     });
   }
+}
+
+function clearAllForms() {
+  // Quiz — clear all 5 question fields
+  for (let i = 1; i <= 5; i++) {
+    ['q-text','q-ans','q-hint','q-accepted','q-exp'].forEach(f => {
+      const el = document.getElementById(`${f}-${i}`); if (el) el.value = '';
+    });
+    const dEl = document.getElementById(`q-diff-${i}`); if (dEl) dEl.value = 'easy';
+  }
+  // Decode
+  ['decode-riddle','decode-answer','decode-accepted','decode-hint'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  // WC Hero
+  heroSelectedPlayer = null;
+  const heroCard = document.getElementById('hero-selected-card');
+  if (heroCard) heroCard.style.display = 'none';
+  const heroBtn = document.getElementById('hero-save-btn');
+  if (heroBtn) heroBtn.disabled = true;
+  // Matches — clear and reset to one blank match
+  const matchContainer = document.getElementById('matches-container');
+  if (matchContainer) { matchContainer.innerHTML = ''; matchCount = 1; addMatch(); }
+  // Crossword — clear canvas
+  cwWords = [];
+  if (typeof cwRenderGrid === 'function') cwRenderGrid();
 }
 
 // ── PANEL NAVIGATION ─────────────────────────────────────
@@ -698,15 +727,21 @@ function addMatch() {
       </div>
     </div>
 
-    <div class="section-lbl">Home squad <span class="hint">(or add manually below)</span></div>
-    <div class="player-list" id="m${n}-home-players"></div>
-    <button class="add-player-btn" onclick="addPlayer('m${n}-home-players')">+ Add home player</button>
+    <div class="section-lbl" style="margin-top:12px">Squads <span class="hint">(or add manually below)</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>
+        <div class="section-lbl" style="font-size:11px">Home squad</div>
+        <div class="player-list" id="m${n}-home-players"></div>
+        <button class="add-player-btn" onclick="addPlayer('m${n}-home-players')">+ Add home player</button>
+      </div>
+      <div>
+        <div class="section-lbl" style="font-size:11px">Away squad</div>
+        <div class="player-list" id="m${n}-away-players"></div>
+        <button class="add-player-btn" onclick="addPlayer('m${n}-away-players')">+ Add away player</button>
+      </div>
+    </div>
 
-    <div class="section-lbl">Away squad</div>
-    <div class="player-list" id="m${n}-away-players"></div>
-    <button class="add-player-btn" onclick="addPlayer('m${n}-away-players')">+ Add away player</button>
-
-    <div class="section-lbl">Actual result <span class="hint">(fill after match to trigger scoring)</span></div>
+    <div class="section-lbl" style="margin-top:12px">Actual result <span class="hint">(fill after match to trigger scoring)</span></div>
     <div class="result-row">
       <input class="result-inp" type="number" id="m${n}-home-result" min="0" max="20" placeholder="—">
       <span class="result-dash">—</span>
@@ -716,6 +751,10 @@ function addMatch() {
     <div class="form-grid">
       <div class="field"><input type="text" id="m${n}-home-scorers" placeholder="e.g. Haaland, Foden"></div>
       <div class="field"><input type="text" id="m${n}-away-scorers" placeholder="e.g. Palmer, Jackson"></div>
+    </div>
+    <div class="field" style="display:flex;align-items:center;gap:8px;margin-top:10px;padding:10px;background:#fff8f0;border:0.5px solid #fcd34d;border-radius:var(--radius)">
+      <input type="checkbox" id="m${n}-completed" style="width:16px;height:16px;accent-color:#059669">
+      <label style="font-size:12px;color:var(--text);text-transform:none;letter-spacing:0;cursor:pointer;font-weight:600" for="m${n}-completed">✅ Mark as completed — hides from active matches, shows in history</label>
     </div>
   `;
   container.appendChild(div);
@@ -832,6 +871,7 @@ async function savePredictor() {
       is_final: document.getElementById(`m${n}-final`)?.checked || false,
       went_to_et: document.getElementById(`m${n}-went-et`)?.value === 'yes' ? true : document.getElementById(`m${n}-went-et`)?.value === 'no' ? false : null,
       went_to_pens: document.getElementById(`m${n}-went-pens`)?.value === 'yes' ? true : document.getElementById(`m${n}-went-pens`)?.value === 'no' ? false : null,
+      completed: document.getElementById(`m${n}-completed`)?.checked || false,
     });
   }
   if (!matches.length) { showToast('Please add at least one match.'); return; }

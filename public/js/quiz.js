@@ -109,8 +109,26 @@ function submitAnswer() {
   document.getElementById('q-submit-btn').disabled=true;
 
   const q = qData[qIdx];
-  const accepted = (q.accepted||[q.answer.toLowerCase()]).map(a=>a.toLowerCase());
-  const correct = accepted.some(a => userAns===a || userAns.includes(a) || a.includes(userAns));
+  const normalise = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  const userNorm = normalise(userAns);
+  const accepted = (q.accepted||[q.answer.toLowerCase()]).map(a => normalise(a));
+
+  // Match if: exact, or user answer contains accepted, or accepted contains user answer (min 4 chars to avoid false positives)
+  // Also allow 1 character difference for typos (Levenshtein distance <= 1)
+  function levenshtein(a, b) {
+    const m = a.length, n = b.length;
+    const dp = Array.from({length: m+1}, (_,i) => [i, ...Array(n).fill(0)]);
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+    return dp[m][n];
+  }
+
+  const correct = accepted.some(a =>
+    userNorm === a ||
+    (userNorm.length >= 4 && (userNorm.includes(a) || a.includes(userNorm))) ||
+    (Math.abs(userNorm.length - a.length) <= 1 && levenshtein(userNorm, a) <= 1)
+  );
 
   const ptsEarned = correct ? SCORING.quiz.perQuestion : 0;
   if (correct) { qScore += ptsEarned; if (!qAssistUsed) qAssists++; }
