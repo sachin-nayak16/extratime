@@ -793,12 +793,16 @@ function renderAdminMatchCard(container, match, date) {
         </div>
       </div>
       <div class="field">
-        <label>Home goalscorers <span class="hint">(comma separated)</span></label>
-        <input type="text" id="res-hscorers-${match.id}-${date}" value="${(match.home_actual_scorers||[]).join(', ')}" placeholder="e.g. Haaland, Foden">
+        <label>Home goalscorers <span class="hint">(hold Ctrl/Cmd for multiple)</span></label>
+        <select id="res-hscorers-${match.id}-${date}" multiple style="height:90px;font-size:12px">
+          ${(match.home_squad||[]).map(p => `<option value="${p.name}" ${(match.home_actual_scorers||[]).includes(p.name)?'selected':''}>${p.name} (${p.position[0]})</option>`).join('')}
+        </select>
       </div>
       <div class="field">
-        <label>Away goalscorers</label>
-        <input type="text" id="res-ascorers-${match.id}-${date}" value="${(match.away_actual_scorers||[]).join(', ')}" placeholder="e.g. Palmer, Jackson">
+        <label>Away goalscorers <span class="hint">(hold Ctrl/Cmd for multiple)</span></label>
+        <select id="res-ascorers-${match.id}-${date}" multiple style="height:90px;font-size:12px">
+          ${(match.away_squad||[]).map(p => `<option value="${p.name}" ${(match.away_actual_scorers||[]).includes(p.name)?'selected':''}>${p.name} (${p.position[0]})</option>`).join('')}
+        </select>
       </div>
     </div>
     ${match.is_final ? `
@@ -843,8 +847,8 @@ async function saveMatchResult(matchId, date) {
       ...m,
       home_result: isNaN(hr) ? null : hr,
       away_result: isNaN(ar) ? null : ar,
-      home_actual_scorers: (document.getElementById(`res-hscorers-${matchId}-${date}`)?.value||'').split(',').map(s=>s.trim()).filter(Boolean),
-      away_actual_scorers: (document.getElementById(`res-ascorers-${matchId}-${date}`)?.value||'').split(',').map(s=>s.trim()).filter(Boolean),
+      home_actual_scorers: Array.from(document.getElementById(`res-hscorers-${matchId}-${date}`)?.selectedOptions||[]).map(o=>o.value),
+      away_actual_scorers: Array.from(document.getElementById(`res-ascorers-${matchId}-${date}`)?.selectedOptions||[]).map(o=>o.value),
       went_to_et: etEl ? (etEl.value === 'yes' ? true : etEl.value === 'no' ? false : null) : m.went_to_et,
       went_to_pens: pensEl ? (pensEl.value === 'yes' ? true : pensEl.value === 'no' ? false : null) : m.went_to_pens,
       completed: document.getElementById(`res-completed-${matchId}-${date}`)?.checked || false,
