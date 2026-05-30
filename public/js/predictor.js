@@ -100,27 +100,32 @@ async function initPredictor(todayContent, yesterdayContent) {
 
 // ── RENDER COMPLETED MATCHES ─────────────────────────────
 function getAllPredictions() {
-  // Scan all et_state_* keys and build a map keyed by "date|matchId"
-  const predMap = {};
+  // Scan all et_state_* keys. Each date's state also has locked_match_ids.
+  // We store all found predictions in an array, then for each completed match
+  // we find the entry where the match was actually locked on that date.
+  // Key insight: store alongside each pred the STATE DATE so we can match
+  // it to the Supabase row date where the match lives.
+  const allEntries = []; // [{stateDate, matchId, pred, isLocked, score}]
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (!key?.startsWith('et_state_')) continue;
-    const date = key.replace('et_state_', '');
+    const stateDate = key.replace('et_state_', '');
     try {
       const s = JSON.parse(localStorage.getItem(key));
       const lockedIds = s?.locked_match_ids || [];
       const score = typeof s?.score_pred === 'number' ? s.score_pred : null;
       (s?.pred_data || []).forEach(p => {
-        const mapKey = `${date}|${p.matchId}`;
-        predMap[mapKey] = {
+        allEntries.push({
+          stateDate,
+          matchId: p.matchId,
           pred: p,
           isLocked: lockedIds.includes(p.matchId),
           score,
-        };
+        });
       });
     } catch {}
   }
-  return predMap;
+  return allEntries;
 }
 
 function renderCompletedMatches(container) {
@@ -132,12 +137,26 @@ function renderCompletedMatches(container) {
     return;
   }
 
-  const allPreds = getAllPredictions();
+  const allPredEntries = getAllPredictions();
 
   // Show newest first
   [...completedMatches].reverse().forEach(match => {
-    const matchDate = match._date || '';
-    const entry = allPreds[`${matchDate}|${match.id}`];
+    // Find the locked prediction for this match.
+    // Match by: same matchId AND stateDate close to kickoff date (within 3 days),
+    // preferring locked entries. Falls back to any entry with matching id.
+    const kickoffDate = match.kickoff ? match.kickoff.split('T')[0] : match._date || '';
+    const kickoffMs = new Date(kickoffDate).getTime();
+
+    let entry = allPredEntries
+      .filter(e => e.matchId === match.id && e.isLocked)
+      .sort((a, b) => Math.abs(new Date(a.stateDate) - kickoffMs) - Math.abs(new Date(b.stateDate) - kickoffMs))[0];
+
+    if (!entry) {
+      entry = allPredEntries
+        .filter(e => e.matchId === match.id)
+        .sort((a, b) => Math.abs(new Date(a.stateDate) - kickoffMs) - Math.abs(new Date(b.stateDate) - kickoffMs))[0];
+    }
+
     const pred = entry?.pred;
     const isLocked = entry?.isLocked || false;
 
