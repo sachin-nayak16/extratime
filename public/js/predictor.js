@@ -59,8 +59,9 @@ async function initPredictor(todayContent, yesterdayContent) {
 
     allMatches.sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
 
-    // Completed = explicitly marked complete by admin
-    completedMatches = allMatches.filter(m => m.completed === true);
+    // Completed = explicitly marked complete by admin, from May 27 onwards only
+    const PRED_CUTOFF = '2026-05-27';
+    completedMatches = allMatches.filter(m => m.completed === true && (m.kickoff || '').slice(0,10) >= PRED_CUTOFF);
 
     // Active = not completed, kickoff within next 7 days or last 24h
     predMatches = allMatches.filter(m => {
@@ -142,13 +143,8 @@ function renderCompletedMatches(container) {
       (e.pred.away_team || '').toLowerCase() === at
     );
 
-    if (!entry) {
-      // Older predictions without team names — match by kickoff proximity
-      const kickoffMs = new Date(match.kickoff || match._date).getTime();
-      entry = allPredEntries
-        .filter(e => e.isLocked && !e.pred.home_team)
-        .sort((a, b) => Math.abs(new Date(a.stateDate) - kickoffMs) - Math.abs(new Date(b.stateDate) - kickoffMs))[0];
-    }
+    // No fallback — old predictions without team names are not shown
+    // to avoid showing wrong predictions for wrong matches
 
     const pred = entry?.pred;
     const isLocked = entry?.isLocked || false;
