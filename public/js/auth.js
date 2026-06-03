@@ -143,5 +143,37 @@ async function updateDailyTotal(userId) {
       user_id: userId, date: CONFIG.today, total_score: total,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,date' });
+    syncStreakToDb(userId);
+  } catch {}
+}
+
+async function syncStreakToDb(userId) {
+  try {
+    // Calculate current streak from localStorage — count consecutive days played
+    let streak = 0;
+    let longest = 0;
+    const d = new Date();
+    for (let i = 0; i < 365; i++) {
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const state = JSON.parse(localStorage.getItem(`et_state_${dateStr}`) || '{}');
+      const played = state.quiz_done || state.cw_solved || state.heroes_done || state.decode_done;
+      if (played) {
+        streak++;
+        longest = Math.max(longest, streak);
+      } else if (i > 0) {
+        break; // streak broken
+      }
+      d.setDate(d.getDate() - 1);
+    }
+    if (streak === 0) return;
+    const { data: existing } = await sb.from('user_streaks').select('longest').eq('user_id', userId).maybeSingle();
+    const newLongest = Math.max(longest, existing?.longest || 0);
+    await sb.from('user_streaks').upsert({
+      user_id: userId,
+      streak_days: streak,
+      longest: newLongest,
+      last_played: CONFIG.today,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
   } catch {}
 }
