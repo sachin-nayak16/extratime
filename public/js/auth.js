@@ -111,12 +111,27 @@ async function saveScoreToDb(game, score) {
   try {
     const { data: { user } } = await sb.auth.getUser();
     if (!user) return;
-    await sb.from('daily_scores').upsert({
+    const { error } = await sb.from('daily_scores').upsert({
       user_id: user.id, date: CONFIG.today, game, score,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,date,game' });
+    if (error) throw error;
     updateDailyTotal(user.id);
-  } catch {}
+  } catch {
+    showSaveWarning();
+  }
+}
+
+function showSaveWarning() {
+  if (document.getElementById('save-warning')) return;
+  const banner = document.createElement('div');
+  banner.id = 'save-warning';
+  banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:999;background:#7c2d12;color:#fed7aa;font-size:12px;font-weight:600;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #ea580c';
+  banner.innerHTML = `
+    <span>⚠️ Your scores aren't saving to the leaderboard. This is usually caused by a browser extension (ad blocker or privacy tool). Try disabling extensions for this site, or use Chrome incognito.</span>
+    <button onclick="this.parentElement.remove()" style="background:none;border:1px solid #ea580c;color:#fed7aa;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:11px;white-space:nowrap">Dismiss</button>
+  `;
+  document.body.appendChild(banner);
 }
 
 async function updateDailyTotal(userId) {
