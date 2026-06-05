@@ -106,7 +106,7 @@ function heroFilter() {
     const div = document.createElement('div');
     div.className = 'legend-opt';
     const same = p.firstName.toLowerCase() === p.name.toLowerCase();
-    div.innerHTML = `<div style="font-weight:500">${p.firstName}${same?'':` <span style="color:var(--text-3);font-weight:400">(${p.name})</span>`}</div><div class="legend-opt-sub">${p.country} · ${p.position}${p.born ? ` · b. ${p.born}` : ''}</div>`;
+    div.innerHTML = `<div style="font-weight:500">${p.firstName}${same?'':` <span style="color:var(--text-3);font-weight:400">(${p.name})</span>`}</div><div class="legend-opt-sub">${p.country} · ${p.position} · ${p.debutWC}</div>`;
     div.addEventListener('mousedown', e => { e.preventDefault(); heroPickPlayer(p); });
     dd.appendChild(div);
   });
@@ -121,11 +121,7 @@ function heroPickPlayer(p) {
   document.getElementById('heroes-submit').disabled = false;
 }
 
-function normaliseCountry(c) {
-  return (c === 'West Germany') ? 'Germany' : c;
-}
 function heroGetClass(key, gv, tv) {
-  if (key === 'country') return normaliseCountry(gv) === normaliseCountry(tv) ? 'ok' : 'no';
   if (gv===tv) return 'ok';
   if (typeof gv==='number' && typeof tv==='number' && Math.abs(gv-tv)<=2) return 'close';
   if (key==='appearances' && typeof gv==='number' && typeof tv==='number' && Math.abs(gv-tv)<=3) return 'close';
@@ -199,8 +195,7 @@ function submitHeroGuess() {
     heroRevealing = false;
     document.getElementById('guess-count').textContent = `Guesses: ${heroGuesses}`;
 
-    const win = guess.name === HEROES_TODAY.name ||
-      (normaliseCountry(guess.country) === normaliseCountry(HEROES_TODAY.country) && guess.debutWC === HEROES_TODAY.debutWC && guess.goals === HEROES_TODAY.goals);
+    const win = guess.name === HEROES_TODAY.name;
 
     if (win) {
       heroDone = true;
@@ -224,6 +219,27 @@ function submitHeroGuess() {
     } else {
       document.getElementById('legend-inp').disabled = false;
       document.getElementById('legend-inp').value = '';
+
+      // "So close" popup — if 5+ categories are green
+      const okCount = classes.filter(c => c === 'ok').length;
+      if (okCount >= 5) showSoClosePopup();
     }
   });
+}
+
+function showSoClosePopup() {
+  if (document.getElementById('so-close-popup')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'so-close-popup';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML = `
+    <div style="background:#13131a;border:1px solid #2a2a3d;border-radius:16px;padding:32px 24px;max-width:340px;width:100%;text-align:center">
+      <div style="font-size:44px;margin-bottom:12px">🔥</div>
+      <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:10px;letter-spacing:-.3px">So close — almost there!</div>
+      <div style="font-size:13px;color:#94a3b8;margin-bottom:24px;line-height:1.6">That's not today's player, but you're very warm. Most of the categories match — keep going!</div>
+      <button onclick="document.getElementById('so-close-popup').remove()" style="width:100%;padding:12px;font-size:13px;font-weight:700;color:#052e16;background:#22c55e;border:none;border-radius:8px;cursor:pointer">Got it — keep guessing</button>
+    </div>
+  `;
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+  document.body.appendChild(overlay);
 }
