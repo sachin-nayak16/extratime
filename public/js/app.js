@@ -1,3 +1,10 @@
+// Clear OAuth hash immediately on load to prevent back-button 400 errors
+(function() {
+  if (window.location.hash && (window.location.hash.includes('access_token') || window.location.hash.includes('error'))) {
+    history.replaceState(null, '', window.location.pathname);
+  }
+})();
+
 // ─── APP INIT ──────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -46,8 +53,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   initDecode();
   initHeroes(todayContent);
 
-  // Handle magic link redirect
-  if (window.location.hash.includes('access_token')) {
+  // Handle OAuth redirect — clear hash so back button doesn't re-trigger Google
+  if (window.location.hash.includes('access_token') || window.location.hash.includes('error_description')) {
     history.replaceState(null, '', window.location.pathname);
   }
 

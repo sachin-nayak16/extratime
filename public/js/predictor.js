@@ -53,7 +53,8 @@ async function initPredictor(todayContent, yesterdayContent) {
         const key = `${m.home_team}|${m.away_team}|${m.kickoff}`;
         if (seen.has(key)) return;
         seen.add(key);
-        allMatches.push({ ...m, _date: row.date });
+        const uid = `${m.kickoff}|${m.home_team}|${m.away_team}`;
+        allMatches.push({ ...m, _date: row.date, uid });
       });
     });
 
@@ -285,28 +286,28 @@ function renderMatches() {
   const lockedMatchIds = state.locked_match_ids || [];
 
   predMatches.forEach(match => {
-    if (!predSelections[match.id]) {
-      predSelections[match.id] = { homeScore:1, awayScore:1, scorers:[], et:null, pens:null };
+    if (!predSelections[match.uid]) {
+      predSelections[match.uid] = { homeScore:1, awayScore:1, scorers:[], et:null, pens:null };
     }
-    const savedPred = (state.pred_data || []).find(p => p.matchId === match.id);
+    const savedPred = (state.pred_data || []).find(p => p.matchId === match.uid);
     if (savedPred) {
-      predSelections[match.id] = { ...predSelections[match.id], ...savedPred };
+      predSelections[match.uid] = { ...predSelections[match.uid], ...savedPred };
     }
 
     const kickoff = new Date(match.kickoff);
     const isKickedOff = kickoff <= new Date();
-    const isLocked = lockedMatchIds.includes(match.id) || isKickedOff;
+    const isLocked = lockedMatchIds.includes(match.uid) || isKickedOff;
     const dateStr = kickoff.toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short' });
     const timeStr = kickoff.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
 
-    const sel = predSelections[match.id];
+    const sel = predSelections[match.uid];
     const lockedBadge = isLocked
-      ? `<div class="mc-locked-badge">✓ Locked · ${sel.homeScore ?? 1}–${sel.awayScore ?? 1}</div>`
-      : `<div class="mc-predict-btn" onclick="openMatchDetail(${match.id})">Predict now →</div>`;
+      ? `<div class="mc-locked-group"><div class="mc-locked-badge">✓ Locked · ${sel?.homeScore ?? 1}–${sel?.awayScore ?? 1}</div>${!isKickedOff ? `<button class="mc-edit-btn" onclick="editPrediction('${match.uid}')">Edit</button>` : ''}</div>`
+      : `<div class="mc-predict-btn" onclick="openMatchDetail('${match.uid}')">Predict now →</div>`;
 
     const card = document.createElement('div');
     card.className = `match-overview-card${isLocked ? ' is-locked' : ''}`;
-    card.id = `match-overview-${match.id}`;
+    card.id = `match-overview-${match.uid}`;
     card.innerHTML = `
       <div class="mc-meta">
         <span class="mc-comp">${match.competition}</span>
@@ -320,12 +321,12 @@ function renderMatches() {
         <span class="mc-team away">${match.away_team}</span>
       </div>
       <div class="mc-footer">
-        <div class="countdown-wrap" id="countdown-${match.id}"></div>
+        <div class="countdown-wrap" id="countdown-${match.uid}"></div>
         ${lockedBadge}
       </div>
     `;
     container.appendChild(card);
-    startCountdown(match.id, kickoff);
+    startCountdown(match.uid, kickoff);
   });
 
 
@@ -333,14 +334,14 @@ function renderMatches() {
 
 // ── OPEN MATCH DETAIL (prediction view) ──────────────────
 function openMatchDetail(matchId) {
-  const match = predMatches.find(m => m.id === matchId);
+  const match = predMatches.find(m => m.uid === matchId);
   if (!match) return;
 
   const state = getState();
   const lockedMatchIds = state.locked_match_ids || [];
   const kickoff = new Date(match.kickoff);
   const isKickedOff = kickoff <= new Date();
-  const isLocked = lockedMatchIds.includes(match.id) || isKickedOff;
+  const isLocked = lockedMatchIds.includes(match.uid) || isKickedOff;
 
   const container = document.getElementById('matches-container');
   countdownTimers.forEach(t => clearInterval(t));
@@ -365,7 +366,7 @@ function openMatchDetail(matchId) {
       const posCls = POS_CLS[pos];
       const btns = players.map(p => {
         const sel = predSelections[match.id].scorers?.some(s => s.name === p.name);
-        return `<button class="player-btn${sel?' sel':''}" ${isLocked?'disabled':''} onclick="toggleScorer(${match.id},'${p.name}','${p.position}',this)">
+        return `<button class="player-btn${sel?' sel':''}" ${isLocked?'disabled':''} onclick="toggleScorer('${match.uid}','${p.name}','${p.position}',this)">
           ${p.name}
         </button>`;
       }).join('');
@@ -380,7 +381,7 @@ function openMatchDetail(matchId) {
 
   const div = document.createElement('div');
   div.className = 'match-card';
-  div.id = `match-card-${match.id}`;
+  div.id = `match-card-${match.uid}`;
   div.innerHTML = `
     <div class="match-time">${match.competition} · ${timeStr}${match.venue ? ' · ' + match.venue : ''}</div>
     <div class="countdown-wrap" id="countdown-${match.id}"></div>
@@ -434,7 +435,7 @@ function openMatchDetail(matchId) {
       </div>
     </div>
     ${!isLocked ? `
-    <button class="btn-full" style="margin-top:10px" onclick="lockMatch(${match.id})">
+    <button class="btn-full" style="margin-top:10px" onclick="lockMatch('${match.uid}')">
       Lock prediction for ${match.home_team} vs ${match.away_team}
     </button>
     <p style="font-size:10px;color:var(--text-3);text-align:center;margin-top:5px">Locks at kick-off · Points awarded after final whistle</p>
@@ -444,12 +445,21 @@ function openMatchDetail(matchId) {
   startCountdown(match.id, kickoff);
 }
 
+
+function editPrediction(matchUid) {
+  const state = getState();
+  const lockedMatchIds = (state.locked_match_ids || []).filter(id => id !== matchUid);
+  const predData = (state.pred_data || []).filter(p => p.matchId !== matchUid);
+  saveState({ locked_match_ids: lockedMatchIds, pred_data: predData });
+  openMatchDetail(matchUid);
+}
+
 async function lockMatch(matchId) {
   const state = getState();
   const lockedMatchIds = [...(state.locked_match_ids || [])];
   if (lockedMatchIds.includes(matchId)) return;
 
-  const matchObj = predMatches.find(m => m.id === matchId);
+  const matchObj = predMatches.find(m => m.uid === matchId);
   const pred = {
     matchId,
     home_team: matchObj?.home_team || '',
@@ -492,7 +502,7 @@ async function lockMatch(matchId) {
     }
   } catch {}
 
-  const match = predMatches.find(m => m.id === matchId);
+  const match = predMatches.find(m => m.uid === matchId);
   showPredToast(`✅ Locked: ${match?.home_team} vs ${match?.away_team}`);
   renderMatches();
   document.getElementById('matches-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -535,7 +545,7 @@ function startCountdown(matchId, kickoff) {
 
 // ── TOGGLE SCORER ─────────────────────────────────────────
 function toggleScorer(matchId, playerName, position, btn) {
-  const sel = predSelections[matchId].scorers;
+  const sel = (predSelections[matchId] || (predSelections[matchId] = {homeScore:1,awayScore:1,scorers:[]})).scorers;
   const idx = sel.findIndex(s => s.name === playerName);
   if (idx >= 0) {
     // Deselect
@@ -544,7 +554,7 @@ function toggleScorer(matchId, playerName, position, btn) {
   } else {
     // Check limit — max 3 per team
     // Determine which team this player belongs to
-    const match = predMatches.find(m => m.id === matchId);
+    const match = predMatches.find(m => m.uid === matchId);
     const isHome = match?.home_squad?.some(p => p.name === playerName);
     const teamKey = isHome ? 'home' : 'away';
     const teamSquad = isHome ? match?.home_squad : match?.away_squad;
@@ -613,7 +623,7 @@ function renderLockedPredictor(state) {
     <p style="font-size:13px;color:var(--green);font-weight:600;margin-bottom:10px">✓ Predictions locked</p>`;
 
   data.forEach(p => {
-    const m = predMatches.find(m => m.id === p.matchId) || { home_team:'Home', away_team:'Away', kickoff: null };
+    const m = predMatches.find(m => m.uid === p.matchId) || { home_team:'Home', away_team:'Away', kickoff: null };
     const kickoff = m.kickoff ? new Date(m.kickoff) : null;
     const timeStr = kickoff ? kickoff.toLocaleString('en-IN',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
 
@@ -650,7 +660,7 @@ function renderLockedPredictor(state) {
 
   // Start countdowns for locked view
   data.forEach(p => {
-    const m = predMatches.find(m => m.id === p.matchId);
+    const m = predMatches.find(m => m.uid === p.matchId);
     if (m?.kickoff) {
       const el = document.getElementById(`locked-countdown-${p.matchId}`);
       if (el) {
@@ -813,7 +823,7 @@ function buildPredHistory() {
 
     state.pred_data?.forEach(p => {
       // Try to get team names from predMatches (works for today's matches)
-      const m = predMatches.find(m => m.id === p.matchId);
+      const m = predMatches.find(m => m.uid === p.matchId);
       const homeTeam = m?.home_team || 'Home';
       const awayTeam = m?.away_team || 'Away';
       const scorerNames = p.scorers?.map(s => `${s.name} (${POS_LABEL[s.position]||'?'})`).join(', ') || '—';

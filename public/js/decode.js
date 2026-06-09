@@ -132,7 +132,7 @@ function openDecodeRiddle(date, riddle) {
       <button class="decode-close" onclick="document.getElementById('decode-overlay').remove()">✕</button>
       <div class="decode-modal-type">${typeLabel}</div>
       <div class="decode-modal-riddle">"${riddle.riddle}"</div>
-      ${!solved && !gaveUp && riddle.hint ? `<div class="decode-modal-hint">💡 ${riddle.hint}</div>` : ''}
+
       <div class="decode-modal-answer-area">
         ${answerHtml}
         <div class="decode-modal-fb" id="decode-modal-fb" style="display:none"></div>

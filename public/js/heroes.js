@@ -106,7 +106,7 @@ function heroFilter() {
     const div = document.createElement('div');
     div.className = 'legend-opt';
     const same = p.firstName.toLowerCase() === p.name.toLowerCase();
-    div.innerHTML = `<div style="font-weight:500">${p.firstName}${same?'':` <span style="color:var(--text-3);font-weight:400">(${p.name})</span>`}</div><div class="legend-opt-sub">${p.country} · ${p.position} · ${p.debutWC}</div>`;
+    div.innerHTML = `<div style="font-weight:500">${p.firstName}${same?'':` <span style="color:var(--text-3);font-weight:400">(${p.name})</span>`}</div><div class="legend-opt-sub">${p.country} · ${p.position} · ${p.born}</div>`;
     div.addEventListener('mousedown', e => { e.preventDefault(); heroPickPlayer(p); });
     dd.appendChild(div);
   });
