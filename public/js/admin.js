@@ -211,7 +211,7 @@ function populateAllForms(data) {
   }
   // Matches — rebuild match editor with saved data
   if (data.matches?.length) {
-    const container = document.getElementById('predictor-admin-container');
+    const container = document.getElementById('matches-container');
     container.innerHTML = '';
     matchCount = 1;
     data.matches.forEach(m => {
@@ -305,7 +305,7 @@ function showPanel(name, btn) {
   btn.classList.add('active');
   if (name === 'schedule') loadSchedule();
   if (name === 'crossword') { initCWCanvas(); cwRenderGrid(); }
-  if (name === 'predictor') loadPredictorAdmin();
+
   if (name === 'decode') populateDecodeDropdowns();
 }
 
@@ -715,7 +715,7 @@ async function saveQuiz() {
 
 // ── SUPER PREDICTOR ───────────────────────────────────────
 function buildMatchEditor() {
-  const container = document.getElementById('predictor-admin-container');
+  const container = document.getElementById('matches-container');
   container.innerHTML = '';
   matchCount = 1;
   addMatch();
@@ -726,8 +726,7 @@ let adminMatches = []; // all matches across all dates: {match, date}
 let adminPredTab = 'upcoming';
 
 async function loadPredictorAdmin() {
-  const container = document.getElementById('predictor-admin-container');
-  if (!container) return;
+  const container = document.getElementById('matches-container');
   container.innerHTML = '<p class="loading">Loading matches...</p>';
 
   try {
@@ -760,7 +759,7 @@ async function loadPredictorAdmin() {
 }
 
 function renderPredictorAdmin() {
-  const container = document.getElementById('predictor-admin-container');
+  const container = document.getElementById('matches-container');
   container.innerHTML = '';
 
   const now = new Date();
@@ -798,7 +797,7 @@ function renderPredictorAdmin() {
                       : 'No completed matches yet.';
     container.appendChild(empty);
   } else {
-      list.forEach(({match, date}) => renderAdminMatchCard(container, match, date));
+      [...list].reverse().forEach(({match, date}) => renderAdminMatchCard(container, match, date));
   }
 
   // Add new match form always shown at bottom
@@ -881,6 +880,33 @@ function renderAdminMatchCard(container, match, date) {
     <button class="btn-g" style="font-size:12px;padding:8px 16px" onclick="saveMatchResult('${match.id}','${date}')">Save result</button>
   `;
   container.appendChild(card);
+
+  // Auto-load squads from team_squads if match has empty squads
+  if (!match.home_squad?.length || !match.away_squad?.length) {
+    const cardId = `${match.id}-${date}`;
+    (async () => {
+      if (!match.home_squad?.length && match.home_team) {
+        const squad = await loadSquadFromMemory(match.home_team);
+        if (squad?.length) {
+          const sel = document.getElementById(`res-hscorers-${cardId}`);
+          if (sel) sel.innerHTML = squad.map(p =>
+            `<option value="${p.name}">${p.name} (${p.position[0]})</option>`
+          ).join('');
+          match.home_squad = squad;
+        }
+      }
+      if (!match.away_squad?.length && match.away_team) {
+        const squad = await loadSquadFromMemory(match.away_team);
+        if (squad?.length) {
+          const sel = document.getElementById(`res-ascorers-${cardId}`);
+          if (sel) sel.innerHTML = squad.map(p =>
+            `<option value="${p.name}">${p.name} (${p.position[0]})</option>`
+          ).join('');
+          match.away_squad = squad;
+        }
+      }
+    })();
+  }
 }
 
 async function saveMatchResult(matchId, date) {
@@ -1091,7 +1117,7 @@ function addMatchTo(container) {
 }
 
 function addMatch() {
-  const container = document.getElementById('predictor-admin-container');
+  const container = document.getElementById('matches-container');
   const n = matchCount;
   const div = document.createElement('div');
   div.className = 'match-block';
