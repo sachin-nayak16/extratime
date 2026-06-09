@@ -338,3 +338,40 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 
 /* Completed match card variant */
 .match-overview-card.is-completed::before{background:linear-gradient(90deg,var(--text-3),var(--border-2))}
+
+/* ── DECODE THIS: CARD LIST ──────────────────────────────── */
+.decode-card{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:10px;cursor:pointer;position:relative;overflow:hidden;transition:border-color .15s}
+.decode-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent-decode),#c084fc)}
+.decode-card.solved::before{background:linear-gradient(90deg,var(--green),#4ade80)}
+.decode-card.gave-up::before{background:linear-gradient(90deg,var(--text-3),var(--border-2))}
+.decode-card:hover{border-color:var(--border-2)}
+.decode-card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.decode-card-date{font-size:12px;font-weight:700;color:#fff}
+.decode-card-type{font-size:10px;font-weight:700;color:var(--accent-decode);background:#1a0f2e;border:1px solid #4a2080;border-radius:99px;padding:2px 8px}
+.decode-card-status{font-size:10px;font-weight:700;border-radius:99px;padding:2px 8px}
+.decode-card-status.ok{background:#052e16;color:#4ade80;border:1px solid #166534}
+.decode-card-status.gave-up{background:#1a1a24;color:var(--text-3);border:1px solid var(--border)}
+.decode-card-preview{font-size:12px;color:var(--text-3);font-style:italic;line-height:1.5}
+
+/* ── DECODE THIS: MODAL ──────────────────────────────────── */
+.decode-modal{background:var(--bg-2);border:1px solid var(--border-2);border-radius:var(--radius-lg);padding:28px 24px;max-width:480px;width:100%;position:relative;max-height:90vh;overflow-y:auto}
+.decode-close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-3);line-height:1}
+.decode-close:hover{color:var(--text)}
+.decode-modal-type{font-size:11px;font-weight:700;color:var(--accent-decode);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+.decode-modal-riddle{font-size:16px;font-weight:500;color:#fff;line-height:1.7;font-style:italic;margin-bottom:16px}
+.decode-modal-hint{font-size:12px;color:#fbbf24;background:#1c1200;border:1px solid #92400e;border-radius:var(--radius);padding:8px 12px;margin-bottom:14px}
+.decode-modal-answer-area{display:flex;flex-direction:column;gap:10px}
+.decode-modal-actions{display:flex;gap:8px}
+.decode-giveup-btn{color:#f87171!important;border-color:#7f1d1d!important}
+.decode-pts-preview{font-size:11px;color:var(--text-3);text-align:center;font-weight:500}
+.decode-modal-solved{background:#052e16;border:1px solid #166534;border-radius:var(--radius);padding:12px 14px;font-size:13px;color:#4ade80;line-height:1.6;text-align:center}
+.decode-modal-gaveup{background:#1a1a24;border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;font-size:13px;color:var(--text-2);text-align:center}
+
+/* ── DECODE THIS: MATCH INPUTS ───────────────────────────── */
+.decode-match-inputs{display:flex;flex-direction:column;gap:10px}
+.decode-match-field{display:flex;flex-direction:column;gap:4px}
+.decode-match-field label{font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em}
+.decode-match-field select{padding:9px 12px;font-size:13px;border:1px solid var(--border-2);border-radius:var(--radius);background:var(--bg-3);color:var(--text);font-family:inherit}
+.decode-match-vs{text-align:center;font-size:12px;font-weight:700;color:var(--text-3)}
+.decode-field-result{font-size:14px;font-weight:700;min-height:18px}
+.decode-field-result:not(:empty){margin-top:2px}
