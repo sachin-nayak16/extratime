@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initCrossword(todayContent);
   initQuiz();
   initPredictor(todayContent, yesterdayContent);
-  initDecode(todayContent);
+  initDecode();
   initHeroes(todayContent);
 
   // Handle magic link redirect

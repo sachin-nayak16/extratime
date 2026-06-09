@@ -182,9 +182,26 @@ function populateAllForms(data) {
   // Decode
   if (data.riddle) {
     document.getElementById('decode-riddle').value = data.riddle.riddle || '';
-    document.getElementById('decode-answer').value = data.riddle.answer || '';
-    document.getElementById('decode-accepted').value = (data.riddle.accepted || []).join(', ');
     document.getElementById('decode-hint').value = data.riddle.hint || '';
+    if (data.riddle.type === 'match') {
+      document.getElementById('decode-type-match').checked = true;
+      toggleDecodeType();
+      populateDecodeDropdowns();
+      setTimeout(() => {
+        const ma = data.riddle.match_answer || {};
+        const ta = document.getElementById('decode-match-ta');
+        const tb = document.getElementById('decode-match-tb');
+        const yr = document.getElementById('decode-match-year');
+        if (ta) ta.value = ma.team_a || '';
+        if (tb) tb.value = ma.team_b || '';
+        if (yr) yr.value = ma.year || '';
+      }, 100);
+    } else {
+      document.getElementById('decode-type-player').checked = true;
+      toggleDecodeType();
+      document.getElementById('decode-answer').value = data.riddle.answer || '';
+      document.getElementById('decode-accepted').value = (data.riddle.accepted || []).join(', ');
+    }
   }
   // WC Hero
   if (data.wc_hero) {
@@ -262,15 +279,19 @@ function clearAllForms() {
   ['decode-riddle','decode-answer','decode-accepted','decode-hint'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
+  const playerRadio = document.getElementById('decode-type-player');
+  if (playerRadio) { playerRadio.checked = true; toggleDecodeType(); }
+  ['decode-match-ta','decode-match-tb','decode-match-year'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
   // WC Hero
   heroSelectedPlayer = null;
   const heroCard = document.getElementById('hero-selected-card');
   if (heroCard) heroCard.style.display = 'none';
   const heroBtn = document.getElementById('hero-save-btn');
   if (heroBtn) heroBtn.disabled = true;
-  // Matches — clear and reset to one blank match
-  const matchContainer = document.getElementById('matches-container');
-  if (matchContainer) { matchContainer.innerHTML = ''; matchCount = 1; addMatch(); }
+  // Matches — reload predictor admin (handles its own state)
+  if (typeof loadPredictorAdmin === 'function') loadPredictorAdmin();
   // Crossword — clear canvas
   cwWords = [];
   if (typeof cwRenderGrid === 'function') cwRenderGrid();
@@ -284,7 +305,37 @@ function showPanel(name, btn) {
   btn.classList.add('active');
   if (name === 'schedule') loadSchedule();
   if (name === 'crossword') { initCWCanvas(); cwRenderGrid(); }
-  if (name === 'predictor') loadPredictorAdmin();
+
+  if (name === 'decode') populateDecodeDropdowns();
+}
+
+const ADMIN_WC_COUNTRIES = ["Algeria","Angola","Argentina","Australia","Austria","Belgium","Bolivia","Bosnia-Herzegovina","Brazil","Bulgaria","Cameroon","Canada","Chile","Colombia","Costa Rica","Croatia","Cuba","Czechia","Czechoslovakia","Côte d'Ivoire","Denmark","Ecuador","Egypt","El Salvador","England","France","Germany DR","Germany","Ghana","Greece","Haiti","Honduras","Hungary","IR Iran","Iceland","Iraq","Israel","Italy","Jamaica","Japan","Korea DPR","Korea Republic","Kuwait","Mexico","Morocco","Netherlands","New Zealand","Nigeria","Northern Ireland","Norway","Panama","Paraguay","Peru","Poland","Portugal","Qatar","Rep. of Ireland","Romania","Russia","Saudi Arabia","Scotland","Senegal","Serbia & Montenegro","Serbia","Slovakia","Slovenia","South Africa","Soviet Union","Spain","Sweden","Switzerland","Togo","Tunisia","Türkiye","UAE","Ukraine","United States","Uruguay","Wales","West Germany","Yugoslavia"];
+
+function populateDecodeDropdowns() {
+  ['decode-match-ta','decode-match-tb'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel || sel.options.length > 1) return;
+    ADMIN_WC_COUNTRIES.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c; opt.textContent = c;
+      sel.appendChild(opt);
+    });
+  });
+  const yearSel = document.getElementById('decode-match-year');
+  if (yearSel && yearSel.options.length <= 1) {
+    for (let y = 1930; y <= 2026; y += 4) {
+      if (y === 1942 || y === 1946) continue;
+      const opt = document.createElement('option');
+      opt.value = y; opt.textContent = y;
+      yearSel.appendChild(opt);
+    }
+  }
+}
+
+function toggleDecodeType() {
+  const isMatch = document.getElementById('decode-type-match')?.checked;
+  document.getElementById('decode-player-fields').style.display = isMatch ? 'none' : 'block';
+  document.getElementById('decode-match-fields').style.display = isMatch ? 'block' : 'none';
 }
 
 // ── CROSSWORD CANVAS BUILDER ──────────────────────────────
@@ -1185,12 +1236,24 @@ async function savePredictor() {
 
 // ── DECODE THIS ───────────────────────────────────────────
 async function saveDecode() {
-  const riddle = document.getElementById('decode-riddle')?.value?.trim();
-  const answer = document.getElementById('decode-answer')?.value?.trim();
-  const accepted = document.getElementById('decode-accepted')?.value?.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  const riddleText = document.getElementById('decode-riddle')?.value?.trim();
   const hint = document.getElementById('decode-hint')?.value?.trim() || '';
-  if (!riddle || !answer || !accepted?.length) { showToast('Please fill in the riddle, answer, and accepted variations.'); return; }
-  const ok = await upsertContent({ riddle: { riddle, answer, accepted, hint } });
+  const isMatch = document.getElementById('decode-type-match')?.checked;
+  if (!riddleText) { showToast('Please fill in the riddle.'); return; }
+  let riddleObj;
+  if (isMatch) {
+    const ta = document.getElementById('decode-match-ta')?.value;
+    const tb = document.getElementById('decode-match-tb')?.value;
+    const yr = parseInt(document.getElementById('decode-match-year')?.value);
+    if (!ta || !tb || !yr) { showToast('Please select Team A, Team B and Year.'); return; }
+    riddleObj = { riddle: riddleText, type: 'match', hint, match_answer: { team_a: ta, team_b: tb, year: yr } };
+  } else {
+    const answer = document.getElementById('decode-answer')?.value?.trim();
+    const accepted = document.getElementById('decode-accepted')?.value?.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    if (!answer) { showToast('Please fill in the player answer.'); return; }
+    riddleObj = { riddle: riddleText, type: 'player', answer, accepted: accepted?.length ? accepted : [answer.toLowerCase()], hint };
+  }
+  const ok = await upsertContent({ riddle: riddleObj });
   if (ok) showToast('✅ Riddle saved!');
   updateContentStatus();
 }
