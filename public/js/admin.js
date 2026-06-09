@@ -154,6 +154,18 @@ async function loadDateContent(date) {
 }
 
 function populateAllForms(data) {
+  // Always clear quiz fields first so previous date's questions don't bleed through
+  for (let i = 1; i <= 5; i++) {
+    ['q-text','q-ans','q-hint','q-accepted','q-exp'].forEach(f => {
+      const el = document.getElementById(`${f}-${i}`); if (el) el.value = '';
+    });
+    const dEl = document.getElementById(`q-diff-${i}`); if (dEl) dEl.value = 'easy';
+  }
+  // Always clear decode fields too
+  ['decode-riddle','decode-answer','decode-accepted','decode-hint'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+
   // Crossword — restore into canvas
   if (data.crossword && !data.crossword.draft) {
     const cw = data.crossword;
