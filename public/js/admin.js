@@ -797,7 +797,7 @@ function renderPredictorAdmin() {
                       : 'No completed matches yet.';
     container.appendChild(empty);
   } else {
-      [...list].reverse().forEach(({match, date}) => renderAdminMatchCard(container, match, date));
+      list.forEach(({match, date}) => renderAdminMatchCard(container, match, date));
   }
 
   // Add new match form always shown at bottom
