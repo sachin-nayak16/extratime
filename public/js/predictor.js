@@ -54,8 +54,8 @@ async function initPredictor(todayContent, yesterdayContent) {
         if (seen.has(key)) return;
         seen.add(key);
         const uid = `${m.kickoff}|${m.home_team}|${m.away_team}`;
-        const safeUid = btoa(encodeURIComponent(uid)).replace(/[+/=]/g, c => ({'+':`-`,'/':'_','=':''} [c]));
-        allMatches.push({ ...m, _date: row.date, uid: safeUid, _rawUid: uid });
+        const safeUid = btoa(encodeURIComponent(uid)).replace(/[+=]/g, c=>({'+':`-`,'=':''}[c]));
+        allMatches.push({ ...m, _date: row.date, uid: safeUid });
       });
     });
 
@@ -548,7 +548,7 @@ function startCountdown(matchId, kickoff) {
 
 // ── TOGGLE SCORER ─────────────────────────────────────────
 function toggleScorer(matchId, playerName, position, btn) {
-  const sel = (predSelections[matchId] || (predSelections[matchId] = {homeScore:1,awayScore:1,scorers:[]})).scorers;
+  const sel = (predSelections[matchId] || (predSelections[matchId]={homeScore:1,awayScore:1,scorers:[]})).scorers;
   const idx = sel.findIndex(s => s.name === playerName);
   if (idx >= 0) {
     // Deselect

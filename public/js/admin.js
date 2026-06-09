@@ -102,7 +102,6 @@ function initAdmin() {
   document.getElementById('global-date').value = today;
   currentDate = today;
   buildQuizEditor();
-  buildMatchEditor();
   loadDateContent(today);
   loadDashboardStats();
   loadSchedule();
@@ -154,14 +153,13 @@ async function loadDateContent(date) {
 }
 
 function populateAllForms(data) {
-  // Always clear quiz fields first so previous date's questions don't bleed through
+  // Always clear quiz and decode fields first so previous date's data doesn't bleed through
   for (let i = 1; i <= 5; i++) {
     ['q-text','q-ans','q-hint','q-accepted','q-exp'].forEach(f => {
       const el = document.getElementById(`${f}-${i}`); if (el) el.value = '';
     });
     const dEl = document.getElementById(`q-diff-${i}`); if (dEl) dEl.value = 'easy';
   }
-  // Always clear decode fields too
   ['decode-riddle','decode-answer','decode-accepted','decode-hint'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
@@ -223,7 +221,7 @@ function populateAllForms(data) {
   }
   // Matches — rebuild match editor with saved data
   if (data.matches?.length) {
-    const container = document.getElementById('matches-container');
+    const container = document.getElementById('predictor-admin-container');
     container.innerHTML = '';
     matchCount = 1;
     data.matches.forEach(m => {
@@ -317,7 +315,7 @@ function showPanel(name, btn) {
   btn.classList.add('active');
   if (name === 'schedule') loadSchedule();
   if (name === 'crossword') { initCWCanvas(); cwRenderGrid(); }
-
+  if (name === 'predictor') loadPredictorAdmin();
   if (name === 'decode') populateDecodeDropdowns();
 }
 
@@ -727,7 +725,8 @@ async function saveQuiz() {
 
 // ── SUPER PREDICTOR ───────────────────────────────────────
 function buildMatchEditor() {
-  const container = document.getElementById('matches-container');
+  const container = document.getElementById('predictor-admin-container');
+  if (!container) return;
   container.innerHTML = '';
   matchCount = 1;
   addMatch();
@@ -738,7 +737,8 @@ let adminMatches = []; // all matches across all dates: {match, date}
 let adminPredTab = 'upcoming';
 
 async function loadPredictorAdmin() {
-  const container = document.getElementById('matches-container');
+  const container = document.getElementById('predictor-admin-container');
+  if (!container) return;
   container.innerHTML = '<p class="loading">Loading matches...</p>';
 
   try {
@@ -771,7 +771,8 @@ async function loadPredictorAdmin() {
 }
 
 function renderPredictorAdmin() {
-  const container = document.getElementById('matches-container');
+  const container = document.getElementById('predictor-admin-container');
+  if (!container) return;
   container.innerHTML = '';
 
   const now = new Date();
@@ -1129,7 +1130,7 @@ function addMatchTo(container) {
 }
 
 function addMatch() {
-  const container = document.getElementById('matches-container');
+  const container = document.getElementById('predictor-admin-container');
   const n = matchCount;
   const div = document.createElement('div');
   div.className = 'match-block';
