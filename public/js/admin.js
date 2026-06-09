@@ -907,7 +907,67 @@ async function saveMatchResult(matchId, date) {
   });
 
   const ok = await upsertContentForDate(date, { matches: updated });
-  if (ok) { showToast('✅ Match updated!'); loadPredictorAdmin(); }
+  if (ok) {
+    // Update squad memory if squads were present
+    const updatedMatch = updated.find(m => m.id === idNum);
+    if (updatedMatch?.home_squad?.length) await saveSquadToMemory(updatedMatch.home_team, updatedMatch.home_squad);
+    if (updatedMatch?.away_squad?.length) await saveSquadToMemory(updatedMatch.away_team, updatedMatch.away_squad);
+    showToast('✅ Match updated!');
+    loadPredictorAdmin();
+  }
+}
+
+
+// ── SQUAD MEMORY ──────────────────────────────────────────
+async function saveSquadToMemory(teamName, squad) {
+  if (!teamName || !squad?.length) return;
+  try {
+    await sb.from('team_squads').upsert({
+      team_name: teamName,
+      squad: squad,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'team_name' });
+  } catch(e) { console.warn('Squad memory save failed:', e); }
+}
+
+async function loadSquadFromMemory(teamName) {
+  if (!teamName) return null;
+  try {
+    const { data } = await sb.from('team_squads').select('squad').eq('team_name', teamName).maybeSingle();
+    return data?.squad || null;
+  } catch { return null; }
+}
+
+async function autoFillSquad(teamInputId, playerListId, side) {
+  const teamName = document.getElementById(teamInputId)?.value?.trim();
+  if (!teamName || teamName.length < 3) return;
+  const squad = await loadSquadFromMemory(teamName);
+  if (!squad?.length) return;
+
+  const list = document.getElementById(playerListId);
+  if (!list) return;
+  // Only auto-fill if list is currently empty
+  if (list.querySelectorAll('.player-item').length > 0) return;
+
+  list.innerHTML = '';
+  squad.forEach(p => {
+    addPlayerToList(list, p.name, p.position);
+  });
+  showToast(`✅ Auto-filled ${squad.length} players for ${teamName}`);
+}
+
+function addPlayerToList(list, name, position) {
+  const item = document.createElement('div');
+  item.className = 'player-item';
+  const posOptions = ['Forward','Midfielder','Defender','Goalkeeper'].map(p =>
+    `<option value="${p}" ${p === position ? 'selected' : ''}>${p[0]}</option>`
+  ).join('');
+  item.innerHTML = `
+    <input type="text" value="${name}" placeholder="Player name" style="flex:1">
+    <select style="width:52px">${posOptions}</select>
+    <button onclick="this.parentElement.remove()" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px;padding:0 4px">×</button>
+  `;
+  list.appendChild(item);
 }
 
 async function upsertContentForDate(date, updates) {
@@ -959,7 +1019,13 @@ async function saveNewMatch() {
   };
 
   const ok = await upsertContentForDate(storageDate, { matches: [...existingMatches, newMatch] });
-  if (ok) { showToast(`✅ Match added to ${storageDate}!`); loadPredictorAdmin(); }
+  if (ok) {
+    // Save squads to memory for future auto-fill
+    await saveSquadToMemory(home, newMatch.home_squad);
+    await saveSquadToMemory(away, newMatch.away_squad);
+    showToast(`✅ Match added to ${storageDate}!`);
+    loadPredictorAdmin();
+  }
 }
 
 function addMatchTo(container) {
@@ -970,11 +1036,11 @@ function addMatchTo(container) {
   div.innerHTML = `
     <div class="form-grid">
       <div class="field"><label>Home team <span class="req">*</span></label>
-        <input type="text" id="m${n}-home" placeholder="e.g. Man City" oninput="teamAutocomplete('m${n}-home','m${n}-home-dd')" autocomplete="off">
+        <input type="text" id="m${n}-home" placeholder="e.g. Man City" oninput="teamAutocomplete('m${n}-home','m${n}-home-dd')" onblur="autoFillSquad('m${n}-home','m${n}-home-players','home')" autocomplete="off">
         <div class="hero-dd" id="m${n}-home-dd"></div>
       </div>
       <div class="field"><label>Away team <span class="req">*</span></label>
-        <input type="text" id="m${n}-away" placeholder="e.g. Chelsea" oninput="teamAutocomplete('m${n}-away','m${n}-away-dd')" autocomplete="off">
+        <input type="text" id="m${n}-away" placeholder="e.g. Chelsea" oninput="teamAutocomplete('m${n}-away','m${n}-away-dd')" onblur="autoFillSquad('m${n}-away','m${n}-away-players','away')" autocomplete="off">
         <div class="hero-dd" id="m${n}-away-dd"></div>
       </div>
       <div class="field"><label>Kick-off time</label><input type="datetime-local" id="m${n}-time"></div>
@@ -1034,11 +1100,11 @@ function addMatch() {
     <div class="form-grid">
     <div class="form-grid">
       <div class="field"><label>Home team <span class="req">*</span></label>
-        <input type="text" id="m${n}-home" placeholder="e.g. Man City" oninput="teamAutocomplete('m${n}-home','m${n}-home-dd')" autocomplete="off">
+        <input type="text" id="m${n}-home" placeholder="e.g. Man City" oninput="teamAutocomplete('m${n}-home','m${n}-home-dd')" onblur="autoFillSquad('m${n}-home','m${n}-home-players','home')" autocomplete="off">
         <div class="hero-dd" id="m${n}-home-dd"></div>
       </div>
       <div class="field"><label>Away team <span class="req">*</span></label>
-        <input type="text" id="m${n}-away" placeholder="e.g. Chelsea" oninput="teamAutocomplete('m${n}-away','m${n}-away-dd')" autocomplete="off">
+        <input type="text" id="m${n}-away" placeholder="e.g. Chelsea" oninput="teamAutocomplete('m${n}-away','m${n}-away-dd')" onblur="autoFillSquad('m${n}-away','m${n}-away-players','away')" autocomplete="off">
         <div class="hero-dd" id="m${n}-away-dd"></div>
       </div>
       <div class="field"><label>Kick-off time</label><input type="datetime-local" id="m${n}-time"></div>

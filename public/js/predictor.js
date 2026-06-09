@@ -243,8 +243,12 @@ function renderMatches() {
     const timeStr = kickoff.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
 
     const sel = predSelections[match.id];
+    const canEdit = isLocked && !isKickedOff;
     const lockedBadge = isLocked
-      ? `<div class="mc-locked-badge">✓ Locked · ${sel.homeScore ?? 1}–${sel.awayScore ?? 1}</div>`
+      ? `<div class="mc-locked-group">
+           <div class="mc-locked-badge">✓ Locked · ${sel.homeScore ?? 1}–${sel.awayScore ?? 1}</div>
+           ${canEdit ? `<button class="mc-edit-btn" onclick="editPrediction(${match.id})">Edit</button>` : ''}
+         </div>`
       : `<div class="mc-predict-btn" onclick="openMatchDetail(${match.id})">Predict now →</div>`;
 
     const card = document.createElement('div');
@@ -385,6 +389,19 @@ function openMatchDetail(matchId) {
   `;
   container.appendChild(div);
   startCountdown(match.id, kickoff);
+}
+
+function editPrediction(matchId) {
+  // Unlock the match so user can re-predict
+  const state = getState();
+  const lockedMatchIds = (state.locked_match_ids || []).filter(id => id !== matchId);
+  const predData = (state.pred_data || []).filter(p => p.matchId !== matchId);
+  saveState({
+    locked_match_ids: lockedMatchIds,
+    pred_data: predData,
+    pred_locked: false,
+  });
+  openMatchDetail(matchId);
 }
 
 async function lockMatch(matchId) {
