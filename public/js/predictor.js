@@ -368,7 +368,7 @@ function openMatchDetail(matchId) {
       const posLabel = POS_LABEL[pos];
       const posCls = POS_CLS[pos];
       const btns = players.map(p => {
-        const sel = predSelections[match.id].scorers?.some(s => s.name === p.name);
+        const sel = predSelections[match.uid]?.scorers?.some(s => s.name === p.name);
         return `<button class="player-btn${sel?' sel':''}" ${isLocked?'disabled':''} onclick="toggleScorer('${match.uid}','${p.name}','${p.position}',this)">
           ${p.name}
         </button>`;
@@ -387,7 +387,7 @@ function openMatchDetail(matchId) {
   div.id = `match-card-${match.uid}`;
   div.innerHTML = `
     <div class="match-time">${match.competition} · ${timeStr}${match.venue ? ' · ' + match.venue : ''}</div>
-    <div class="countdown-wrap" id="countdown-${match.id}"></div>
+    <div class="countdown-wrap" id="countdown-${match.uid}"></div>
     <div class="match-row">
       <span class="team-name">${match.home_team}</span>
       <span class="vs-badge">vs</span>
@@ -395,15 +395,15 @@ function openMatchDetail(matchId) {
     </div>
     ${isLocked ? `
     <div style="text-align:center;padding:8px 0">
-      <div style="font-size:28px;font-weight:900;color:var(--text);letter-spacing:-1px">${predSelections[match.id].homeScore ?? 1} — ${predSelections[match.id].awayScore ?? 1}</div>
+      <div style="font-size:28px;font-weight:900;color:var(--text);letter-spacing:-1px">${predSelections[match.uid].homeScore ?? 1} — ${predSelections[match.uid].awayScore ?? 1}</div>
       <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:4px">✓ Prediction locked</div>
     </div>` : `
     <div class="score-inputs">
-      <input class="score-inp" type="number" min="0" max="20" value="${predSelections[match.id].homeScore}" id="home-score-${match.id}"
-        oninput="predSelections[${match.id}].homeScore=+this.value">
+      <input class="score-inp" type="number" min="0" max="20" value="${predSelections[match.uid].homeScore}" id="home-score-${match.uid}"
+        oninput="predSelections['${match.uid}'].homeScore=+this.value">
       <span class="score-dash">—</span>
-      <input class="score-inp" type="number" min="0" max="20" value="${predSelections[match.id].awayScore}" id="away-score-${match.id}"
-        oninput="predSelections[${match.id}].awayScore=+this.value">
+      <input class="score-inp" type="number" min="0" max="20" value="${predSelections[match.uid].awayScore}" id="away-score-${match.uid}"
+        oninput="predSelections['${match.uid}'].awayScore=+this.value">
     </div>`}
     ${match.is_final && !isLocked ? `
     <div class="final-predictions">
@@ -411,15 +411,15 @@ function openMatchDetail(matchId) {
       <div class="final-pred-row">
         <span class="final-pred-label">Will this go to Extra Time?</span>
         <div class="final-pred-btns">
-          <button class="final-btn${predSelections[match.id].et==='yes'?' final-btn-sel':''}" id="et-yes-${match.id}" onclick="setFinalPred(${match.id},'et','yes',this)">Yes</button>
-          <button class="final-btn${predSelections[match.id].et==='no'?' final-btn-sel':''}" id="et-no-${match.id}" onclick="setFinalPred(${match.id},'et','no',this)">No</button>
+          <button class="final-btn${predSelections[match.uid].et==='yes'?' final-btn-sel':''}" id="et-yes-${match.uid}" onclick="setFinalPred('${match.uid}','et','yes',this)">Yes</button>
+          <button class="final-btn${predSelections[match.uid].et==='no'?' final-btn-sel':''}" id="et-no-${match.uid}" onclick="setFinalPred('${match.uid}','et','no',this)">No</button>
         </div>
       </div>
-      <div class="final-pred-row" id="pens-row-${match.id}" style="display:${predSelections[match.id].et==='yes'?'flex':'none'}">
+      <div class="final-pred-row" id="pens-row-${match.uid}" style="display:${predSelections[match.uid].et==='yes'?'flex':'none'}">
         <span class="final-pred-label">Will this go to Penalties?</span>
         <div class="final-pred-btns">
-          <button class="final-btn${predSelections[match.id].pens==='yes'?' final-btn-sel':''}" id="pens-yes-${match.id}" onclick="setFinalPred(${match.id},'pens','yes',this)">Yes</button>
-          <button class="final-btn${predSelections[match.id].pens==='no'?' final-btn-sel':''}" id="pens-no-${match.id}" onclick="setFinalPred(${match.id},'pens','no',this)">No</button>
+          <button class="final-btn${predSelections[match.uid].pens==='yes'?' final-btn-sel':''}" id="pens-yes-${match.uid}" onclick="setFinalPred('${match.uid}','pens','yes',this)">Yes</button>
+          <button class="final-btn${predSelections[match.uid].pens==='no'?' final-btn-sel':''}" id="pens-no-${match.uid}" onclick="setFinalPred('${match.uid}','pens','no',this)">No</button>
         </div>
       </div>
     </div>` : ''}
@@ -445,7 +445,7 @@ function openMatchDetail(matchId) {
     ` : ''}
   `;
   container.appendChild(div);
-  startCountdown(match.id, kickoff);
+  startCountdown(match.uid, kickoff);
 }
 
 
