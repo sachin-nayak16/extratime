@@ -380,3 +380,8 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 .mc-locked-group{display:flex;align-items:center;gap:8px}
 .mc-edit-btn{font-size:11px;font-weight:700;color:var(--text-2);background:none;border:1px solid var(--border-2);border-radius:var(--radius);padding:5px 10px;cursor:pointer;transition:all .15s}
 .mc-edit-btn:hover{color:#fff;border-color:var(--text-2)}
+
+/* ── PREDICTOR: EDIT PREDICTION ──────────────────────────── */
+.mc-locked-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.mc-edit-btn{font-size:11px;font-weight:700;color:var(--text-2);background:none;border:1px solid var(--border-2);border-radius:var(--radius);padding:5px 10px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.mc-edit-btn:hover{color:#fff;border-color:var(--text-2)}
