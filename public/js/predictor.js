@@ -54,7 +54,8 @@ async function initPredictor(todayContent, yesterdayContent) {
         if (seen.has(key)) return;
         seen.add(key);
         const uid = `${m.kickoff}|${m.home_team}|${m.away_team}`;
-        allMatches.push({ ...m, _date: row.date, uid });
+        const safeUid = btoa(encodeURIComponent(uid)).replace(/[+/=]/g, c => ({'+':`-`,'/':'_','=':''} [c]));
+        allMatches.push({ ...m, _date: row.date, uid: safeUid, _rawUid: uid });
       });
     });
 
@@ -72,7 +73,9 @@ async function initPredictor(todayContent, yesterdayContent) {
       return diffHours > -24 && diffHours < 7 * 24;
     });
 
-    if (!predMatches.length && !completedMatches.length) predMatches = SAMPLE_MATCHES;
+    if (!predMatches.length && !completedMatches.length) {
+      predMatches = SAMPLE_MATCHES.map((m, i) => ({ ...m, uid: `sample_${i}` }));
+    }
   } catch {
     predMatches = todayContent?.matches?.length ? todayContent.matches : SAMPLE_MATCHES;
     completedMatches = [];

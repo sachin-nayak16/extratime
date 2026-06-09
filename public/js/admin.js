@@ -211,7 +211,7 @@ function populateAllForms(data) {
   }
   // Matches — rebuild match editor with saved data
   if (data.matches?.length) {
-    const container = document.getElementById('matches-container');
+    const container = document.getElementById('predictor-admin-container');
     container.innerHTML = '';
     matchCount = 1;
     data.matches.forEach(m => {
@@ -305,7 +305,7 @@ function showPanel(name, btn) {
   btn.classList.add('active');
   if (name === 'schedule') loadSchedule();
   if (name === 'crossword') { initCWCanvas(); cwRenderGrid(); }
-
+  if (name === 'predictor') loadPredictorAdmin();
   if (name === 'decode') populateDecodeDropdowns();
 }
 
@@ -715,7 +715,7 @@ async function saveQuiz() {
 
 // ── SUPER PREDICTOR ───────────────────────────────────────
 function buildMatchEditor() {
-  const container = document.getElementById('matches-container');
+  const container = document.getElementById('predictor-admin-container');
   container.innerHTML = '';
   matchCount = 1;
   addMatch();
@@ -726,7 +726,8 @@ let adminMatches = []; // all matches across all dates: {match, date}
 let adminPredTab = 'upcoming';
 
 async function loadPredictorAdmin() {
-  const container = document.getElementById('matches-container');
+  const container = document.getElementById('predictor-admin-container');
+  if (!container) return;
   container.innerHTML = '<p class="loading">Loading matches...</p>';
 
   try {
@@ -759,7 +760,7 @@ async function loadPredictorAdmin() {
 }
 
 function renderPredictorAdmin() {
-  const container = document.getElementById('matches-container');
+  const container = document.getElementById('predictor-admin-container');
   container.innerHTML = '';
 
   const now = new Date();
@@ -1090,7 +1091,7 @@ function addMatchTo(container) {
 }
 
 function addMatch() {
-  const container = document.getElementById('matches-container');
+  const container = document.getElementById('predictor-admin-container');
   const n = matchCount;
   const div = document.createElement('div');
   div.className = 'match-block';
