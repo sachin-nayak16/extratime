@@ -138,18 +138,46 @@
       <div class="apanel" id="apanel-predictor">
         <div class="apanel-title">Super Predictor</div>
         <div class="apanel-sub">Add matches and squads. Fill in actual result after the match to trigger scoring.</div>
-        <div id="matches-container"><p class="loading">Loading...</p></div>
+        <div id="matches-container"></div>
+        <button class="btn-w" onclick="addMatch()" style="margin-bottom:10px">+ Add another match</button>
+        <button class="btn-full" onclick="savePredictor()">Save fixtures</button>
       </div>
 
       <!-- DECODE THIS -->
       <div class="apanel" id="apanel-decode">
         <div class="apanel-title">Decode This</div>
-        <div class="apanel-sub">One football/WC riddle per day. List accepted answer variations so players aren't penalised for minor differences.</div>
+        <div class="apanel-sub">Add a daily riddle. Choose whether the answer is a player or a match.</div>
         <div class="acard">
           <div class="field"><label>Riddle <span class="req">*</span></label><textarea id="decode-riddle" placeholder="e.g. I am worn by heroes, feared by rivals..."></textarea></div>
-          <div class="field"><label>Primary answer <span class="req">*</span></label><input type="text" id="decode-answer" placeholder="e.g. FIFA World Cup Trophy"></div>
-          <div class="field"><label>Accepted variations <span class="req">*</span> <span class="hint">(comma separated)</span></label><input type="text" id="decode-accepted" placeholder="e.g. trophy, world cup trophy, the trophy, fifa trophy"></div>
-          <div class="field"><label>Hint <span class="hint">(optional)</span></label><input type="text" id="decode-hint" placeholder="e.g. It is made of gold and sits on a plinth"></div>
+          <div class="field"><label>Hint <span class="hint">(optional — shown to user as clue)</span></label><input type="text" id="decode-hint" placeholder="e.g. He won the Golden Ball at this tournament"></div>
+          <div class="field">
+            <label>Answer type <span class="req">*</span></label>
+            <div style="display:flex;gap:16px;margin-top:6px">
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;letter-spacing:0;cursor:pointer;font-weight:600;color:var(--text)">
+                <input type="radio" name="decode-type" value="player" id="decode-type-player" onchange="toggleDecodeType()" checked style="accent-color:#059669"> 👤 Player
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;letter-spacing:0;cursor:pointer;font-weight:600;color:var(--text)">
+                <input type="radio" name="decode-type" value="match" id="decode-type-match" onchange="toggleDecodeType()" style="accent-color:#059669"> ⚔️ Match
+              </label>
+            </div>
+          </div>
+          <div id="decode-player-fields">
+            <div class="field"><label>Player answer <span class="req">*</span></label><input type="text" id="decode-answer" placeholder="e.g. Zinedine Zidane"></div>
+            <div class="field"><label>Accepted variations <span class="hint">(comma separated — optional)</span></label><input type="text" id="decode-accepted" placeholder="e.g. Zidane, ZZ"></div>
+          </div>
+          <div id="decode-match-fields" style="display:none">
+            <div class="form-grid">
+              <div class="field"><label>Team A <span class="req">*</span></label>
+                <select id="decode-match-ta"><option value="">Select team...</option></select>
+              </div>
+              <div class="field"><label>Team B <span class="req">*</span></label>
+                <select id="decode-match-tb"><option value="">Select team...</option></select>
+              </div>
+              <div class="field"><label>Year <span class="req">*</span></label>
+                <select id="decode-match-year"><option value="">Select year...</option></select>
+              </div>
+            </div>
+          </div>
           <button class="btn-full" onclick="saveDecode()">Save riddle</button>
         </div>
       </div>
