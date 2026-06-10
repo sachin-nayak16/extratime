@@ -94,12 +94,12 @@ async function initPredictor(todayContent, yesterdayContent) {
   try {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30*24*60*60*1000).toISOString().split('T')[0];
-    const nextWeek = new Date(now.getTime() + 7*24*60*60*1000).toISOString().split('T')[0];
+    const nextMonth = new Date(now.getTime() + 30*24*60*60*1000).toISOString().split('T')[0];
 
     const { data } = await sb.from('daily_content')
       .select('date, matches')
       .gte('date', thirtyDaysAgo)
-      .lte('date', nextWeek)
+      .lte('date', nextMonth)
       .not('matches', 'is', null);
 
     const allMatches = [];
@@ -111,7 +111,9 @@ async function initPredictor(todayContent, yesterdayContent) {
         const key = `${m.home_team}|${m.away_team}|${m.kickoff}`;
         if (seen.has(key)) return;
         seen.add(key);
-        allMatches.push({ ...m, _date: row.date });
+        const _uid = `${m.kickoff}|${m.home_team}|${m.away_team}`;
+        const _enc = _uid.replace(/[^a-zA-Z0-9]/g, c => ('_'+c.charCodeAt(0)+'_'));
+        allMatches.push({ ...m, _date: row.date, uid: _enc });
       });
     });
 
@@ -129,7 +131,7 @@ async function initPredictor(todayContent, yesterdayContent) {
       return diffHours > -24 && diffHours < 7 * 24;
     });
 
-    if (!predMatches.length && !completedMatches.length) predMatches = SAMPLE_MATCHES;
+    if (!predMatches.length && !completedMatches.length) predMatches = SAMPLE_MATCHES.map((m,i)=>({...m,uid:`sample_${i}`}));
   } catch {
     predMatches = todayContent?.matches?.length ? todayContent.matches : SAMPLE_MATCHES;
     completedMatches = [];
@@ -355,28 +357,28 @@ function renderMatches() {
   const lockedMatchIds = state.locked_match_ids || [];
 
   predMatches.forEach(match => {
-    if (!predSelections[match.id]) {
-      predSelections[match.id] = { homeScore:1, awayScore:1, scorers:[], et:null, pens:null };
+    if (!predSelections[match.uid]) {
+      predSelections[match.uid] = { homeScore:1, awayScore:1, scorers:[], et:null, pens:null };
     }
-    const savedPred = (state.pred_data || []).find(p => p.matchId === match.id);
+    const savedPred = (state.pred_data || []).find(p => p.matchId === match.uid);
     if (savedPred) {
-      predSelections[match.id] = { ...predSelections[match.id], ...savedPred };
+      predSelections[match.uid] = { ...predSelections[match.uid], ...savedPred };
     }
 
     const kickoff = new Date(match.kickoff);
     const isKickedOff = kickoff <= new Date();
-    const isLocked = lockedMatchIds.includes(match.id) || isKickedOff;
+    const isLocked = lockedMatchIds.includes(match.uid) || isKickedOff;
     const dateStr = kickoff.toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short' });
     const timeStr = kickoff.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
 
-    const sel = predSelections[match.id];
+    const sel = predSelections[match.uid];
     const lockedBadge = isLocked
-      ? `<div class="mc-locked-badge">✓ Locked · ${sel.homeScore ?? 1}–${sel.awayScore ?? 1}</div>`
-      : `<div class="mc-predict-btn" onclick="openMatchDetail(${match.id})">Predict now →</div>`;
+      ? `<div class="mc-locked-group"><div class="mc-locked-badge">✓ Locked · ${sel?.homeScore ?? 1}–${sel?.awayScore ?? 1}</div>${!isKickedOff ? `<button class="mc-edit-btn" onclick="editPrediction('${match.uid}')">Edit</button>` : ''}</div>`
+      : `<div class="mc-predict-btn" onclick="openMatchDetail('${match.uid}')">Predict now →</div>`;
 
     const card = document.createElement('div');
     card.className = `match-overview-card${isLocked ? ' is-locked' : ''}`;
-    card.id = `match-overview-${match.id}`;
+    card.id = `match-overview-${match.uid}`;
     card.innerHTML = `
       <div class="mc-meta">
         <span class="mc-comp">${match.competition}</span>
@@ -390,12 +392,12 @@ function renderMatches() {
         <span class="mc-team away">${match.away_team} ${getFlag(match.away_team)}</span>
       </div>
       <div class="mc-footer">
-        <div class="countdown-wrap" id="countdown-${match.id}"></div>
+        <div class="countdown-wrap" id="countdown-${match.uid}"></div>
         ${lockedBadge}
       </div>
     `;
     container.appendChild(card);
-    startCountdown(match.id, kickoff);
+    startCountdown(match.uid, kickoff);
   });
 
 
@@ -403,14 +405,14 @@ function renderMatches() {
 
 // ── OPEN MATCH DETAIL (prediction view) ──────────────────
 function openMatchDetail(matchId) {
-  const match = predMatches.find(m => m.id === matchId);
+  const match = predMatches.find(m => m.uid === matchId);
   if (!match) return;
 
   const state = getState();
   const lockedMatchIds = state.locked_match_ids || [];
   const kickoff = new Date(match.kickoff);
   const isKickedOff = kickoff <= new Date();
-  const isLocked = lockedMatchIds.includes(match.id) || isKickedOff;
+  const isLocked = lockedMatchIds.includes(match.uid) || isKickedOff;
 
   const container = document.getElementById('matches-container');
   countdownTimers.forEach(t => clearInterval(t));
@@ -434,8 +436,8 @@ function openMatchDetail(matchId) {
       const posLabel = POS_LABEL[pos];
       const posCls = POS_CLS[pos];
       const btns = players.map(p => {
-        const sel = predSelections[match.id].scorers?.some(s => s.name === p.name);
-        return `<button class="player-btn${sel?' sel':''}" ${isLocked?'disabled':''} onclick="toggleScorer(${match.id},'${p.name}','${p.position}',this)">
+        const sel = predSelections[match.uid].scorers?.some(s => s.name === p.name);
+        return `<button class="player-btn${sel?' sel':''}" ${isLocked?'disabled':''} onclick="toggleScorer('${match.uid}','${p.name}','${p.position}',this)">
           ${p.name}
         </button>`;
       }).join('');
@@ -450,10 +452,10 @@ function openMatchDetail(matchId) {
 
   const div = document.createElement('div');
   div.className = 'match-card';
-  div.id = `match-card-${match.id}`;
+  div.id = `match-card-${match.uid}`;
   div.innerHTML = `
     <div class="match-time">${match.competition} · ${timeStr}${match.venue ? ' · ' + match.venue : ''}</div>
-    <div class="countdown-wrap" id="countdown-${match.id}"></div>
+    <div class="countdown-wrap" id="countdown-${match.uid}"></div>
     <div class="match-row">
       <span class="team-name">${getFlag(match.home_team)} ${match.home_team}</span>
       <span class="vs-badge">vs</span>
@@ -461,15 +463,15 @@ function openMatchDetail(matchId) {
     </div>
     ${isLocked ? `
     <div style="text-align:center;padding:8px 0">
-      <div style="font-size:28px;font-weight:900;color:var(--text);letter-spacing:-1px">${predSelections[match.id].homeScore ?? 1} — ${predSelections[match.id].awayScore ?? 1}</div>
+      <div style="font-size:28px;font-weight:900;color:var(--text);letter-spacing:-1px">${predSelections[match.uid].homeScore ?? 1} — ${predSelections[match.uid].awayScore ?? 1}</div>
       <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:4px">✓ Prediction locked</div>
     </div>` : `
     <div class="score-inputs">
-      <input class="score-inp" type="number" min="0" max="20" value="${predSelections[match.id].homeScore}" id="home-score-${match.id}"
-        oninput="predSelections[${match.id}].homeScore=+this.value">
+      <input class="score-inp" type="number" min="0" max="20" value="${predSelections[match.uid].homeScore}" id="home-score-${match.uid}"
+        oninput="predSelections['${match.uid}'].homeScore=+this.value">
       <span class="score-dash">—</span>
-      <input class="score-inp" type="number" min="0" max="20" value="${predSelections[match.id].awayScore}" id="away-score-${match.id}"
-        oninput="predSelections[${match.id}].awayScore=+this.value">
+      <input class="score-inp" type="number" min="0" max="20" value="${predSelections[match.uid].awayScore}" id="away-score-${match.uid}"
+        oninput="predSelections['${match.uid}'].awayScore=+this.value">
     </div>`}
     ${match.is_final && !isLocked ? `
     <div class="final-predictions">
@@ -477,15 +479,15 @@ function openMatchDetail(matchId) {
       <div class="final-pred-row">
         <span class="final-pred-label">Will this go to Extra Time?</span>
         <div class="final-pred-btns">
-          <button class="final-btn${predSelections[match.id].et==='yes'?' final-btn-sel':''}" id="et-yes-${match.id}" onclick="setFinalPred(${match.id},'et','yes',this)">Yes</button>
-          <button class="final-btn${predSelections[match.id].et==='no'?' final-btn-sel':''}" id="et-no-${match.id}" onclick="setFinalPred(${match.id},'et','no',this)">No</button>
+          <button class="final-btn${predSelections[match.uid].et==='yes'?' final-btn-sel':''}" id="et-yes-${match.uid}" onclick="setFinalPred('${match.uid}','et','yes',this)">Yes</button>
+          <button class="final-btn${predSelections[match.uid].et==='no'?' final-btn-sel':''}" id="et-no-${match.uid}" onclick="setFinalPred('${match.uid}','et','no',this)">No</button>
         </div>
       </div>
-      <div class="final-pred-row" id="pens-row-${match.id}" style="display:${predSelections[match.id].et==='yes'?'flex':'none'}">
+      <div class="final-pred-row" id="pens-row-${match.uid}" style="display:${predSelections[match.uid].et==='yes'?'flex':'none'}">
         <span class="final-pred-label">Will this go to Penalties?</span>
         <div class="final-pred-btns">
-          <button class="final-btn${predSelections[match.id].pens==='yes'?' final-btn-sel':''}" id="pens-yes-${match.id}" onclick="setFinalPred(${match.id},'pens','yes',this)">Yes</button>
-          <button class="final-btn${predSelections[match.id].pens==='no'?' final-btn-sel':''}" id="pens-no-${match.id}" onclick="setFinalPred(${match.id},'pens','no',this)">No</button>
+          <button class="final-btn${predSelections[match.uid].pens==='yes'?' final-btn-sel':''}" id="pens-yes-${match.uid}" onclick="setFinalPred('${match.uid}','pens','yes',this)">Yes</button>
+          <button class="final-btn${predSelections[match.uid].pens==='no'?' final-btn-sel':''}" id="pens-no-${match.uid}" onclick="setFinalPred('${match.uid}','pens','no',this)">No</button>
         </div>
       </div>
     </div>` : ''}
@@ -504,22 +506,31 @@ function openMatchDetail(matchId) {
       </div>
     </div>
     ${!isLocked ? `
-    <button class="btn-full" style="margin-top:10px" onclick="lockMatch(${match.id})">
+    <button class="btn-full" style="margin-top:10px" onclick="lockMatch('${match.uid}')">
       Lock prediction for ${match.home_team} vs ${match.away_team}
     </button>
     <p style="font-size:10px;color:var(--text-3);text-align:center;margin-top:5px">Locks at kick-off · Points awarded after final whistle</p>
     ` : ''}
   `;
   container.appendChild(div);
-  startCountdown(match.id, kickoff);
+  startCountdown(match.uid, kickoff);
 }
 
+
+function editPrediction(matchUid) {
+  const state = getState();
+  saveState({
+    locked_match_ids: (state.locked_match_ids||[]).filter(id=>id!==matchUid),
+    pred_data: (state.pred_data||[]).filter(p=>p.matchId!==matchUid)
+  });
+  openMatchDetail(matchUid);
+}
 async function lockMatch(matchId) {
   const state = getState();
   const lockedMatchIds = [...(state.locked_match_ids || [])];
   if (lockedMatchIds.includes(matchId)) return;
 
-  const matchObj = predMatches.find(m => m.id === matchId);
+  const matchObj = predMatches.find(m => m.uid === matchId);
   const pred = {
     matchId,
     home_team: matchObj?.home_team || '',
@@ -562,7 +573,7 @@ async function lockMatch(matchId) {
     }
   } catch {}
 
-  const match = predMatches.find(m => m.id === matchId);
+  const match = predMatches.find(m => m.uid === matchId);
   showPredToast(`✅ Locked: ${match?.home_team} vs ${match?.away_team}`);
   renderMatches();
   document.getElementById('matches-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -614,7 +625,7 @@ function toggleScorer(matchId, playerName, position, btn) {
   } else {
     // Check limit — max 3 per team
     // Determine which team this player belongs to
-    const match = predMatches.find(m => m.id === matchId);
+    const match = predMatches.find(m => m.uid === matchId);
     const isHome = match?.home_squad?.some(p => p.name === playerName);
     const teamKey = isHome ? 'home' : 'away';
     const teamSquad = isHome ? match?.home_squad : match?.away_squad;
@@ -683,7 +694,7 @@ function renderLockedPredictor(state) {
     <p style="font-size:13px;color:var(--green);font-weight:600;margin-bottom:10px">✓ Predictions locked</p>`;
 
   data.forEach(p => {
-    const m = predMatches.find(m => m.id === p.matchId) || { home_team:'Home', away_team:'Away', kickoff: null };
+    const m = predMatches.find(m => m.uid === p.matchId) || { home_team:'Home', away_team:'Away', kickoff: null };
     const kickoff = m.kickoff ? new Date(m.kickoff) : null;
     const timeStr = kickoff ? kickoff.toLocaleString('en-IN',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
 
@@ -720,7 +731,7 @@ function renderLockedPredictor(state) {
 
   // Start countdowns for locked view
   data.forEach(p => {
-    const m = predMatches.find(m => m.id === p.matchId);
+    const m = predMatches.find(m => m.uid === p.matchId);
     if (m?.kickoff) {
       const el = document.getElementById(`locked-countdown-${p.matchId}`);
       if (el) {
@@ -883,7 +894,7 @@ function buildPredHistory() {
 
     state.pred_data?.forEach(p => {
       // Try to get team names from predMatches (works for today's matches)
-      const m = predMatches.find(m => m.id === p.matchId);
+      const m = predMatches.find(m => m.uid === p.matchId);
       const homeTeam = m?.home_team || 'Home';
       const awayTeam = m?.away_team || 'Away';
       const scorerNames = p.scorers?.map(s => `${s.name} (${POS_LABEL[s.position]||'?'})`).join(', ') || '—';
