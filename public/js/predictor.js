@@ -301,9 +301,9 @@ function renderCompletedMatches(container) {
           <div class="mc-score-label">Your prediction ${outcomeEmoji}</div>
           <div class="mc-score-val pred-val">${pred ? `${pred.home ?? pred.homeScore ?? '?'} – ${pred.away ?? pred.awayScore ?? '?'}` : '—'}</div>
           ${displayScore !== null && displayScore !== undefined
-            ? `<div class="mc-pts-badge">+${displayScore} pts</div>`
+            ? `<div class="mc-pts-badge">Score: ${displayScore} pts</div>`
             : hasResult
-              ? `<div class="mc-pts-badge zero">0 pts</div>`
+              ? `<div class="mc-pts-badge zero">Score: 0 pts</div>`
               : `<div class="mc-score-label" style="margin-top:2px">result pending</div>`}
         </div>` : `
         <div class="mc-score-block" style="opacity:.5">
