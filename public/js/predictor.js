@@ -280,7 +280,7 @@ function renderCompletedMatches(container) {
     card.className = 'match-overview-card is-completed';
     card.innerHTML = `
       <div class="mc-meta">
-        <span class="mc-comp" style="color:var(--text-3)">${match.competition}</span>
+        <span class="mc-comp">${match.competition}</span>
         <span class="mc-dot">·</span>
         <span class="mc-date">${dateStr}</span>
       </div>
@@ -289,19 +289,30 @@ function renderCompletedMatches(container) {
         <span class="mc-vs">vs</span>
         <span class="mc-team away">${match.away_team} ${getFlag(match.away_team)}</span>
       </div>
-      <div class="mc-footer" style="justify-content:space-between">
-        ${hasResult ? `<div style="font-size:13px;font-weight:800;color:#fff">${match.home_result} – ${match.away_result} <span style="font-size:10px;font-weight:500;color:var(--text-3)">FT</span></div>` : '<div style="font-size:11px;color:var(--text-3)">Result pending</div>'}
-        ${isLocked
-          ? `<div style="font-size:11px;font-weight:600;color:var(--text-2)">
-               ${outcomeEmoji}Your prediction: <strong style="color:#fff">${userPredHtml}</strong>
-               ${displayScore !== null && displayScore !== undefined
-                 ? `<span style="margin-left:8px;color:var(--green);font-weight:700">+${displayScore} pts</span>`
-                 : hasResult
-                   ? `<span style="margin-left:8px;color:var(--text-3);font-weight:400">0 pts</span>`
-                   : `<span style="margin-left:8px;color:var(--text-3);font-weight:400">(result pending)</span>`}
-             </div>`
-          : `<div style="font-size:11px;color:var(--text-3)">No prediction made</div>`}
+      <div class="mc-score-row">
+        <div class="mc-score-block">
+          <div class="mc-score-label">Result</div>
+          <div class="mc-score-val">${hasResult ? `${match.home_result} – ${match.away_result}` : '— vs —'} <span class="mc-ft-tag">${hasResult ? 'FT' : ''}</span></div>
+        </div>
+        ${isLocked ? `
+        <div class="mc-score-divider"></div>
+        <div class="mc-score-block pred-block">
+          <div class="mc-score-label">Your prediction ${outcomeEmoji}</div>
+          <div class="mc-score-val pred-val">${pred ? `${pred.home ?? pred.homeScore ?? '?'} – ${pred.away ?? pred.awayScore ?? '?'}` : '—'}</div>
+          ${displayScore !== null && displayScore !== undefined
+            ? `<div class="mc-pts-badge">+${displayScore} pts</div>`
+            : hasResult
+              ? `<div class="mc-pts-badge zero">0 pts</div>`
+              : `<div class="mc-score-label" style="margin-top:2px">result pending</div>`}
+        </div>` : `
+        <div class="mc-score-block" style="opacity:.5">
+          <div class="mc-score-label">No prediction made</div>
+        </div>`}
       </div>
+      ${isLocked && pred?.scorers?.length ? `
+        <div class="mc-scorers-row">
+          Predicted: ${(pred.scorers||[]).map(s => s.name).join(', ')}
+        </div>` : ''}
     `;
     // Add hover breakdown tooltip if scored
     if (hasResult && isLocked && pred && displayScore !== null) {
