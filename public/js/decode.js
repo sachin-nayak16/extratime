@@ -12,11 +12,15 @@ async function initDecode() {
   try {
     const now = new Date();
     const sixtyDaysAgo = new Date(now.getTime() - 60*24*60*60*1000).toISOString().split('T')[0];
-    const twoDaysAhead = new Date(now.getTime() + 2*24*60*60*1000).toISOString().split('T')[0];
+    // Allow preview mode to see upcoming riddles, regular users only see up to today
+    const isPreview = new URLSearchParams(window.location.search).has('preview');
+    const fetchUntil = isPreview
+      ? new Date(now.getTime() + 7*24*60*60*1000).toISOString().split('T')[0]
+      : CONFIG.today;
     const { data } = await sb.from('daily_content')
       .select('date, riddle')
       .gte('date', sixtyDaysAgo)
-      .lte('date', twoDaysAhead)
+      .lte('date', fetchUntil)
       .not('riddle', 'is', null)
       .order('date', { ascending: false });
 
