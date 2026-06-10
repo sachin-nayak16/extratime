@@ -132,7 +132,7 @@ function openDecodeRiddle(date, riddle) {
       <button class="decode-close" onclick="document.getElementById('decode-overlay').remove()">✕</button>
       <div class="decode-modal-type">${typeLabel}</div>
       <div class="decode-modal-riddle">"${riddle.riddle}"</div>
-
+      ${!solved && !gaveUp && riddle.hint ? `<div class="decode-modal-hint">💡 ${riddle.hint}</div>` : ''}
       <div class="decode-modal-answer-area">
         ${answerHtml}
         <div class="decode-modal-fb" id="decode-modal-fb" style="display:none"></div>
@@ -252,17 +252,22 @@ function submitDecodeAnswer(date) {
       best = Math.max(dayState.decode_best || 0, streak);
     }
 
+    const todayState = getState();
     const newState = {
       ...updatedState,
       decode_done: true, decode_solved: true,
       score_decode: pts, decode_streak: streak, decode_best: best,
+      ...(isToday ? {
+        decode_played: (todayState.decode_played || 0) + 1,
+        decode_won: (todayState.decode_won || 0) + 1,
+      } : {}),
     };
     localStorage.setItem(stateKey, JSON.stringify(newState));
 
     if (isToday) {
       saveScoreToDb('decode', pts);
       updateScoreDisplay();
-      buildDecodeStats(getState());
+      buildDecodeStats(newState);
     }
 
     // Show solved state in modal
@@ -281,16 +286,20 @@ function giveUpDecode(date) {
   const isToday = date === CONFIG.today;
   const streak = isToday ? 0 : (dayState.decode_streak || 0); // break streak for today
 
+  const todayState2 = getState();
   const newState = {
     ...dayState,
     decode_done: true, decode_gave_up: true, decode_solved: false,
     score_decode: 0, decode_streak: streak,
+    ...(isToday ? {
+      decode_played: (todayState2.decode_played || 0) + 1,
+    } : {}),
   };
   localStorage.setItem(stateKey, JSON.stringify(newState));
 
   if (isToday) {
     saveScoreToDb('decode', 0);
-    buildDecodeStats(getState());
+    buildDecodeStats(newState);
   }
 
   document.getElementById('decode-overlay').remove();
@@ -307,8 +316,12 @@ function showDecodeFb(msg, type) {
 }
 
 function buildDecodeStats(state) {
-  const played = state.decode_played || 0;
-  const won = state.decode_won || 0;
+  // Count across all days for played/won (not just today)
+  let played = 0, won = 0;
+  Object.keys(localStorage).filter(k => k.startsWith('et_state_')).forEach(k => {
+    const s = JSON.parse(localStorage.getItem(k) || '{}');
+    if (s.decode_done) { played++; if (s.decode_solved) won++; }
+  });
   const winPct = played > 0 ? Math.round((won / played) * 100) : 0;
   const streak = state.decode_streak || 0;
   const best = state.decode_best || 0;
