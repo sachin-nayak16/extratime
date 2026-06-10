@@ -111,7 +111,8 @@ async function initPredictor(todayContent, yesterdayContent) {
         const key = `${m.home_team}|${m.away_team}|${m.kickoff}`;
         if (seen.has(key)) return;
         seen.add(key);
-        const _uid = `${m.kickoff}|${m.home_team}|${m.away_team}`;
+        // Use home+away+date as uid — avoids timezone inconsistency with kickoff
+        const _uid = `${row.date}|${m.home_team}|${m.away_team}`;
         const _enc = _uid.replace(/[^a-zA-Z0-9]/g, c => ('_'+c.charCodeAt(0)+'_'));
         allMatches.push({ ...m, _date: row.date, uid: _enc });
       });
