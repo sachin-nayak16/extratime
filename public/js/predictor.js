@@ -372,9 +372,17 @@ function renderMatches() {
     if (!predSelections[match.uid]) {
       predSelections[match.uid] = { homeScore:1, awayScore:1, scorers:[], et:null, pens:null };
     }
-    const savedPred = (state.pred_data || []).find(p => p.matchId === match.uid);
+    // Prefer uid-format match, fall back to numeric for old data
+    const allPreds = state.pred_data || [];
+    const savedPred = allPreds.find(p => p.matchId === match.uid)
+      || allPreds.find(p => typeof p.matchId === 'number' && p.home_team === match.home_team && p.away_team === match.away_team);
     if (savedPred) {
-      predSelections[match.uid] = { ...predSelections[match.uid], ...savedPred };
+      predSelections[match.uid] = {
+        ...predSelections[match.uid],
+        ...savedPred,
+        homeScore: savedPred.home ?? savedPred.homeScore ?? 1,
+        awayScore: savedPred.away ?? savedPred.awayScore ?? 1,
+      };
     }
 
     const kickoff = new Date(match.kickoff);
