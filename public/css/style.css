@@ -409,3 +409,6 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 .mc-pts-badge.zero{background:#f3f4f6;color:var(--text-3)}
 .mc-score-divider{width:1px;background:var(--border);flex-shrink:0}
 .mc-scorers-row{font-size:11px;color:var(--text-3);margin-top:8px;font-style:italic;line-height:1.5}
+
+/* ── WC HEROES DISCLAIMER ────────────────────────────────── */
+.heroes-disclaimer{font-size:11px;color:var(--text-3);margin-bottom:12px;font-style:italic;line-height:1.5}
