@@ -399,7 +399,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 
 /* ── COMPLETED MATCH SCORE ROW ───────────────────────────── */
 .mc-score-row{display:flex;align-items:stretch;gap:0;background:#f8faf8;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:10px}
-.mc-score-block{flex:1;padding:10px 14px;display:flex;flex-direction:column;gap:3px}
+.mc-score-block{flex:1;padding:10px 14px;display:flex;flex-direction:column;gap:3px;align-items:center;text-align:center}
 .pred-block{background:#f0fdf4}
 .mc-score-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3)}
 .mc-score-val{font-size:18px;font-weight:900;color:var(--text);letter-spacing:-.5px;line-height:1.2}
