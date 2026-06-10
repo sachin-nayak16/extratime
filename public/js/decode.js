@@ -12,10 +12,11 @@ async function initDecode() {
   try {
     const now = new Date();
     const sixtyDaysAgo = new Date(now.getTime() - 60*24*60*60*1000).toISOString().split('T')[0];
+    const twoDaysAhead = new Date(now.getTime() + 2*24*60*60*1000).toISOString().split('T')[0];
     const { data } = await sb.from('daily_content')
       .select('date, riddle')
       .gte('date', sixtyDaysAgo)
-      .lte('date', CONFIG.today)
+      .lte('date', twoDaysAhead)
       .not('riddle', 'is', null)
       .order('date', { ascending: false });
 
