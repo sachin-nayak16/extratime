@@ -396,3 +396,16 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 #quiz-play .card{border-top:4px solid #2563eb}
 .prog-fill{background:#2563eb!important}
 .score-breakdown-tip{display:block;background:#fffbeb;border:1px solid var(--gold-border);border-left:3px solid var(--gold);border-radius:0 var(--radius) var(--radius) 0;padding:10px 12px;font-size:11px;line-height:1.8;color:#78420a;margin-top:8px}
+
+/* ── COMPLETED MATCH SCORE ROW ───────────────────────────── */
+.mc-score-row{display:flex;align-items:stretch;gap:0;background:#f8faf8;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:10px}
+.mc-score-block{flex:1;padding:10px 14px;display:flex;flex-direction:column;gap:3px}
+.pred-block{background:#f0fdf4}
+.mc-score-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3)}
+.mc-score-val{font-size:18px;font-weight:900;color:var(--text);letter-spacing:-.5px;line-height:1.2}
+.pred-val{color:var(--green)}
+.mc-ft-tag{font-size:9px;font-weight:700;color:var(--text-3);vertical-align:middle;letter-spacing:.05em}
+.mc-pts-badge{display:inline-block;background:var(--gold);color:#78350f;font-size:10px;font-weight:700;border-radius:99px;padding:2px 8px;margin-top:3px;width:fit-content}
+.mc-pts-badge.zero{background:#f3f4f6;color:var(--text-3)}
+.mc-score-divider{width:1px;background:var(--border);flex-shrink:0}
+.mc-scorers-row{font-size:11px;color:var(--text-3);margin-top:8px;font-style:italic;line-height:1.5}
