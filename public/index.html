@@ -22,25 +22,26 @@
 </div>
 
 <div class="tabs" id="tabs">
-  <button class="tab active" onclick="showTab('cw',this)">Crossword</button>
-  <button class="tab" onclick="showTab('quiz',this)">Quiz</button>
-  <button class="tab" onclick="showTab('pred',this)">Super Predictor</button>
+  <button class="tab active" onclick="showTab('heroes',this)">WC Heroes</button>
   <button class="tab" onclick="showTab('decode',this)">Decode This</button>
-  <button class="tab" onclick="showTab('heroes',this)">WC Heroes</button>
+  <button class="tab" onclick="showTab('quiz',this)">Quiz</button>
+  <button class="tab" onclick="showTab('cw',this)">Crossword</button>
+  <button class="tab" onclick="showTab('pred',this)">Super Predictor</button>
   <button class="tab" onclick="showTab('lb',this)">Leaderboard</button>
 </div>
 
 <div class="sbar">
   <div class="sp"><div class="sl">Total</div><div class="sv g" id="sc-total">0</div></div>
-  <div class="sp"><div class="sl">Quiz</div><div class="sv" id="sc-quiz">—</div></div>
-  <div class="sp"><div class="sl">Predictor</div><div class="sv" id="sc-pred">—</div></div>
   <div class="sp"><div class="sl">Heroes</div><div class="sv" id="sc-heroes">—</div></div>
+  <div class="sp"><div class="sl">Decode</div><div class="sv" id="sc-decode">—</div></div>
+  <div class="sp"><div class="sl">Quiz</div><div class="sv" id="sc-quiz">—</div></div>
   <div class="sp"><div class="sl">Crossword</div><div class="sv" id="sc-crossword">—</div></div>
+  <div class="sp"><div class="sl">Predictor</div><div class="sv" id="sc-pred">—</div></div>
   <div class="sp"><button class="share-bar-btn" onclick="shareScore('all')" title="Share your scorecard">📤</button></div>
 </div>
 
 <!-- CROSSWORD -->
-<div class="pane active" id="pane-cw">
+<div class="pane" id="pane-cw">
   <p class="gtitle">Daily Football Crossword</p>
   <div class="stat-row" id="cw-stats"></div>
   <div class="active-bar" id="active-bar">Click a clue or cell to begin</div>
@@ -107,7 +108,7 @@
 </div>
 
 <!-- WC HEROES -->
-<div class="pane" id="pane-heroes">
+<div class="pane active" id="pane-heroes">
   <p class="gtitle">WC Heroes</p>
   <p class="heroes-prompt">🏆 Guess Today's World Cup Hero</p>
   <p class="heroes-disclaimer">* Player stats (caps, goals, editions) are based on records up to and including the 2022 FIFA World Cup</p>
