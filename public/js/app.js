@@ -100,7 +100,7 @@ function shareScore(game) {
   // Build scorecard text
   const lines = [];
   lines.push(`⚽ Extra Time — ${dateLabel}`);
-  lines.push(`extratime-eight.vercel.app`);
+  lines.push(`extratime.playextratime.com`);
   lines.push('');
 
   // Crossword

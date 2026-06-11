@@ -27,7 +27,7 @@ const _localDate = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2
 
 const CONFIG = {
   siteName: 'Extra Time',
-  siteUrl: 'https://extratime-eight.vercel.app',
+  siteUrl: 'https://www.playextratime.com',
   today: _localDate,
 };
 
@@ -72,7 +72,7 @@ function saveState(updates) {
 function updateScoreDisplay() {
   const state = getState();
   let total = 0;
-  ['quiz', 'pred', 'heroes'].forEach(key => {
+  ['quiz', 'pred', 'heroes', 'decode'].forEach(key => {
     const el = document.getElementById(`sc-${key}`);
     const score = state[`score_${key}`];
     if (el) {
@@ -106,7 +106,7 @@ function showTab(name, btn) {
 
 function restoreActiveTab() {
   const saved = sessionStorage.getItem('et_active_tab');
-  if (!saved || saved === 'cw') return;
+  if (!saved || saved === 'heroes') return;
   const btn = document.querySelector(`.tab[onclick*="'${saved}'"]`);
   if (btn) showTab(saved, btn);
 }

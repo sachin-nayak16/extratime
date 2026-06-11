@@ -356,11 +356,19 @@ function renderMatches() {
     <button class="pred-tab ${predActiveTab==='past'?'active':''}" onclick="switchPredTab('past')">
       Past ${completedMatches.length ? `<span class="pred-tab-count">${completedMatches.length}</span>` : ''}
     </button>
+    <button class="pred-tab ${predActiveTab==='predlb'?'active':''}" onclick="switchPredTab('predlb')">
+      🏆 Rankings
+    </button>
   `;
   container.appendChild(tabBar);
 
   if (predActiveTab === 'past') {
     renderCompletedMatches(container);
+    return;
+  }
+
+  if (predActiveTab === 'predlb') {
+    renderPredLeaderboard(container);
     return;
   }
 
@@ -1017,4 +1025,92 @@ async function savePredictionScore(score) {
     if (!user) return;
     await sb.from('predictions').update({ score }).eq('user_id', user.id).eq('date', CONFIG.today);
   } catch {}
+}
+
+// ── PREDICTOR ALL-TIME LEADERBOARD ───────────────────────
+async function renderPredLeaderboard(container) {
+  const div = document.createElement('div');
+  div.className = 'pred-lb-wrap';
+  div.innerHTML = `<div style="font-size:12px;color:var(--text-3);padding:20px 0;text-align:center">Loading rankings...</div>`;
+  container.appendChild(div);
+
+  try {
+    // Fetch all prediction scores from Supabase
+    const { data, error } = await sb
+      .from('predictions')
+      .select('user_id, score, date')
+      .not('score', 'is', null)
+      .order('date', { ascending: false });
+
+    if (error) throw error;
+
+    // Aggregate by user_id
+    const totals = {};
+    (data || []).forEach(({ user_id, score }) => {
+      if (typeof score !== 'number') return;
+      totals[user_id] = (totals[user_id] || 0) + score;
+    });
+
+    // Fetch usernames for all user_ids
+    const userIds = Object.keys(totals);
+    if (!userIds.length) {
+      div.innerHTML = `<p style="font-size:13px;color:var(--text-3);padding:20px 0;text-align:center">No scores yet — make your first prediction!</p>`;
+      return;
+    }
+
+    const { data: profiles } = await sb
+      .from('profiles')
+      .select('id, username, avatar_color')
+      .in('id', userIds);
+
+    const profileMap = {};
+    (profiles || []).forEach(p => { profileMap[p.id] = p; });
+
+    // Build sorted rankings
+    const ranked = userIds
+      .map(uid => ({ uid, total: totals[uid], profile: profileMap[uid] }))
+      .filter(r => r.profile)
+      .sort((a, b) => b.total - a.total);
+
+    // Get current user
+    let currentUserId = null;
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      currentUserId = user?.id;
+    } catch {}
+
+    // Render
+    let html = `
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;padding-top:4px">
+        🌍 FIFA World Cup 2026 — Predictor Rankings
+      </div>
+      <div style="font-size:11px;color:var(--text-3);margin-bottom:14px">Total points across all World Cup matches</div>
+    `;
+
+    ranked.forEach(({ uid, total, profile }, i) => {
+      const isMe = uid === currentUserId;
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+      const bg = isMe ? 'background:var(--green-faint,#ecfdf5);border-color:var(--green);' : '';
+      html += `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-2);border:1px solid var(--border);${bg}border-radius:var(--radius);margin-bottom:6px${isMe?';font-weight:700':''}" >
+          <div style="font-size:14px;min-width:28px;text-align:center">${medal}</div>
+          <div style="flex:1;font-size:13px;color:var(--text)">${profile.username}${isMe ? ' <span style="font-size:10px;color:var(--green)">(you)</span>' : ''}</div>
+          <div style="font-size:14px;font-weight:700;color:var(--green)">${total} pts</div>
+        </div>`;
+    });
+
+    if (!ranked.length) {
+      html += `<p style="font-size:13px;color:var(--text-3);text-align:center;padding:16px 0">No scores yet — results appear here after matches are scored.</p>`;
+    }
+
+    if (currentUserId && !ranked.find(r => r.uid === currentUserId)) {
+      html += `<div style="font-size:12px;color:var(--text-3);margin-top:12px;text-align:center">Make a prediction and lock it in to appear on the rankings!</div>`;
+    } else if (!currentUserId) {
+      html += `<div style="margin-top:14px;text-align:center"><button onclick="showAuth()" style="background:var(--green);color:#fff;border:none;border-radius:var(--radius);padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer">Sign in to join</button></div>`;
+    }
+
+    div.innerHTML = html;
+  } catch (e) {
+    div.innerHTML = `<p style="font-size:13px;color:var(--text-3);padding:20px 0;text-align:center">Couldn't load rankings. Try again later.</p>`;
+  }
 }
