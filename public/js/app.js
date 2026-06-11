@@ -95,54 +95,68 @@ function showContentBanners(content) {
 function shareScore(game) {
   const state = getState();
   const today = CONFIG.today;
-  const dateLabel = new Date(today).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+  const dateLabel = new Date(today).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
 
-  // Build scorecard text
   const lines = [];
-  lines.push(`⚽ Extra Time — ${dateLabel}`);
-  lines.push(`extratime.playextratime.com`);
+  lines.push(`⚽ Extra Time · ${dateLabel}`);
+  lines.push(`playextratime.com`);
   lines.push('');
 
-  // Crossword
-  if (state.cw_solved) lines.push(`🟩 Crossword: Solved ✓`);
-  else if (state.cw_played) lines.push(`🟥 Crossword: Not solved`);
-  else lines.push(`⬜ Crossword: Not played`);
-
-  // Quiz
-  if (state.quiz_done) {
-    const pts = state.score_quiz || 0;
-    const stars = pts >= 50 ? '⭐⭐⭐' : pts >= 30 ? '⭐⭐' : pts >= 10 ? '⭐' : '';
-    lines.push(`🟩 Quiz: ${pts}/50 pts ${stars}`);
-  } else lines.push(`⬜ Quiz: Not played`);
-
-  // Predictor
-  if (state.pred_locked) {
-    const pts = typeof state.score_pred === 'number' ? `${state.score_pred} pts` : 'Locked 🔒';
-    lines.push(`🟩 Predictor: ${pts}`);
-  } else lines.push(`⬜ Predictor: Not played`);
+  // WC Heroes — show red blocks for wrong guesses, green for final correct
+  if (state.heroes_done) {
+    const g = state.heroes_guesses || 1;
+    const blocks = Array.from({length: g - 1}, () => '🟥').join('') + '🟩';
+    lines.push(`🏆 WC Heroes: ${g} guess${g === 1 ? '' : 'es'} ${blocks}`);
+  } else {
+    lines.push(`⬜ WC Heroes: Not played`);
+  }
 
   // Decode This
-  if (state.decode_done) lines.push(`🟩 Decode This: Solved ✓`);
-  else if (state.decode_played) lines.push(`🟥 Decode This: Not solved`);
-  else lines.push(`⬜ Decode This: Not played`);
+  if (state.decode_done && state.decode_solved) {
+    const pts = state.score_decode || 0;
+    const att = state.decode_attempts || 1;
+    lines.push(`🔍 Decode This: Solved in ${att} attempt${att === 1 ? '' : 's'} (${pts} pts)`);
+  } else if (state.decode_done) {
+    lines.push(`🔍 Decode This: Revealed`);
+  } else {
+    lines.push(`⬜ Decode This: Not played`);
+  }
 
-  // WC Heroes
-  if (state.heroes_done) {
-    const guesses = state.heroes_guesses || 0;
-    const blocks = '🟩'.repeat(Math.min(guesses-1, 6)).padEnd(6, '🟥').slice(0, guesses-1) + '🟩';
-    lines.push(`🟩 WC Heroes: ${guesses} guess${guesses===1?'':'es'} ${blocks}`);
-  } else lines.push(`⬜ WC Heroes: Not played`);
+  // Quiz — fill 5 squares proportionally
+  if (state.quiz_done) {
+    const pts = state.score_quiz || 0;
+    const filled = Math.round((pts / 50) * 5);
+    const blocks = '🟩'.repeat(filled) + '⬜'.repeat(5 - filled);
+    lines.push(`🧠 Quiz: ${pts}/50 pts ${blocks}`);
+  } else {
+    lines.push(`⬜ Quiz: Not played`);
+  }
+
+  // Crossword
+  if (state.cw_solved)       lines.push(`📰 Crossword: Solved ✓`);
+  else if (state.cw_played)  lines.push(`📰 Crossword: Not solved`);
+  else                        lines.push(`⬜ Crossword: Not played`);
+
+  // Super Predictor
+  if (state.pred_locked) {
+    const pts = typeof state.score_pred === 'number' ? `${state.score_pred} pts` : 'Locked 🔒';
+    lines.push(`🎯 Predictor: ${pts}`);
+  } else {
+    lines.push(`⬜ Predictor: Not played`);
+  }
 
   lines.push('');
-  lines.push(`Total: ${state.score_quiz||0} + ${typeof state.score_pred==='number'?state.score_pred:0} pts`);
+  const total = (state.score_heroes || 0)
+    + (state.score_quiz || 0)
+    + (state.score_decode || 0)
+    + (typeof state.score_pred === 'number' ? state.score_pred : 0);
+  lines.push(`Total: ${total} pts 🔥`);
 
   const text = lines.join('\n');
 
-  // Copy to clipboard
   if (navigator.clipboard) {
     navigator.clipboard.writeText(text).then(() => showShareToast());
   } else {
-    // Fallback
     const el = document.createElement('textarea');
     el.value = text;
     document.body.appendChild(el);
