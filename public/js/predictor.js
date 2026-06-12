@@ -400,8 +400,11 @@ function renderMatches() {
     const timeStr = kickoff.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
 
     const sel = predSelections[match.uid];
+    const savedPredForBadge = (state.pred_data || []).find(p => p.matchId === match.uid);
+    const badgeHome = savedPredForBadge != null ? (savedPredForBadge.home ?? savedPredForBadge.homeScore ?? '?') : (sel?.homeScore ?? '?');
+    const badgeAway = savedPredForBadge != null ? (savedPredForBadge.away ?? savedPredForBadge.awayScore ?? '?') : (sel?.awayScore ?? '?');
     const lockedBadge = isLocked
-      ? `<div class="mc-locked-group"><div class="mc-locked-badge">✓ Locked · ${sel?.homeScore ?? 1}–${sel?.awayScore ?? 1}</div>${!isKickedOff ? `<button class="mc-edit-btn" onclick="editPrediction('${match.uid}')">Edit</button>` : ''}</div>`
+      ? `<div class="mc-locked-group"><div class="mc-locked-badge">✓ Locked · ${badgeHome}–${badgeAway}</div>${!isKickedOff ? `<button class="mc-edit-btn" onclick="editPrediction('${match.uid}')">Edit</button>` : ''}</div>`
       : `<div class="mc-predict-btn" onclick="openMatchDetail('${match.uid}')">Predict now →</div>`;
 
     const card = document.createElement('div');
@@ -496,10 +499,10 @@ function openMatchDetail(matchId) {
     </div>` : `
     <div class="score-inputs">
       <input class="score-inp" type="number" min="0" max="20" value="${predSelections[match.uid].homeScore}" id="home-score-${match.uid}"
-        oninput="predSelections['${match.uid}'].homeScore=+this.value">
+        oninput="predSelections['${match.uid}'].homeScore=parseInt(this.value,10)||0">
       <span class="score-dash">—</span>
       <input class="score-inp" type="number" min="0" max="20" value="${predSelections[match.uid].awayScore}" id="away-score-${match.uid}"
-        oninput="predSelections['${match.uid}'].awayScore=+this.value">
+        oninput="predSelections['${match.uid}'].awayScore=parseInt(this.value,10)||0">
     </div>`}
     ${match.is_final && !isLocked ? `
     <div class="final-predictions">
@@ -558,13 +561,26 @@ async function lockMatch(matchId) {
   const lockedMatchIds = [...(state.locked_match_ids || [])];
   if (lockedMatchIds.includes(matchId)) return;
 
+  // Always read score from the DOM inputs at lock time — this is the source of truth.
+  // predSelections can be stale if oninput didn't fire (mobile steppers, autofill, etc.)
+  const homeInp = document.getElementById(`home-score-${matchId}`);
+  const awayInp = document.getElementById(`away-score-${matchId}`);
+  const homeScore = homeInp ? parseInt(homeInp.value, 10) : (predSelections[matchId]?.homeScore ?? 1);
+  const awayScore = awayInp ? parseInt(awayInp.value, 10) : (predSelections[matchId]?.awayScore ?? 1);
+
+  // Sync back to predSelections so everything stays consistent
+  if (predSelections[matchId]) {
+    predSelections[matchId].homeScore = homeScore;
+    predSelections[matchId].awayScore = awayScore;
+  }
+
   const matchObj = predMatches.find(m => m.uid === matchId);
   const pred = {
     matchId,
     home_team: matchObj?.home_team || '',
     away_team: matchObj?.away_team || '',
-    home: predSelections[matchId]?.homeScore ?? 1,
-    away: predSelections[matchId]?.awayScore ?? 1,
+    home: homeScore,
+    away: awayScore,
     scorers: predSelections[matchId]?.scorers ?? [],
     et: predSelections[matchId]?.et ?? null,
     pens: predSelections[matchId]?.pens ?? null,
