@@ -38,13 +38,15 @@ function buildScoreBreakdown(pred, match) {
   const ph = pred.home ?? pred.homeScore ?? 0;
   const pa = pred.away ?? pred.awayScore ?? 0;
   const lines = [];
+  const ao = hr>ar?'H':ar>hr?'A':'D', po = ph>pa?'H':pa>ph?'A':'D';
   if (ph === hr && pa === ar) {
     lines.push(`✅ Exact score (${ph}–${pa}) → +${SCORING.predictor.exactScore} pts`);
+    lines.push(`✅ Correct outcome → +${SCORING.predictor.correctOutcome} pts`);
+    lines.push(`✅ Correct goal diff → +${SCORING.predictor.correctGoalDiff} pts`);
   } else {
-    const ao = hr>ar?'H':ar>hr?'A':'D', po = ph>pa?'H':pa>ph?'A':'D';
     if (ao===po) lines.push(`🟡 Correct outcome → +${SCORING.predictor.correctOutcome} pts`);
     else lines.push(`❌ Wrong outcome`);
-    if (Math.abs(hr-ar)===Math.abs(ph-pa) && !(ph===hr&&pa===ar))
+    if (Math.abs(hr-ar)===Math.abs(ph-pa))
       lines.push(`🟡 Correct goal diff → +${SCORING.predictor.correctGoalDiff} pts`);
   }
   const allScorers = [...(match.home_actual_scorers||[]), ...(match.away_actual_scorers||[])];
@@ -187,11 +189,13 @@ function calcPredScore(pred, match) {
   const ph = pred.home ?? pred.homeScore ?? 0;
   const pa = pred.away ?? pred.awayScore ?? 0;
   let pts = 0;
+  const actualOutcome = hr > ar ? 'H' : ar > hr ? 'A' : 'D';
+  const predOutcome = ph > pa ? 'H' : pa > ph ? 'A' : 'D';
   if (ph === hr && pa === ar) {
     pts += SCORING.predictor.exactScore;
+    pts += SCORING.predictor.correctOutcome;
+    pts += SCORING.predictor.correctGoalDiff;
   } else {
-    const actualOutcome = hr > ar ? 'H' : ar > hr ? 'A' : 'D';
-    const predOutcome = ph > pa ? 'H' : pa > ph ? 'A' : 'D';
     if (actualOutcome === predOutcome) pts += SCORING.predictor.correctOutcome;
     if (Math.abs(hr-ar) === Math.abs(ph-pa)) pts += SCORING.predictor.correctGoalDiff;
   }
@@ -809,17 +813,21 @@ function checkAndShowResultsForMatches(state, matches, isYesterday) {
     const hr = m.home_result, ar = m.away_result;
     const ph = p.home, pa = p.away;
 
+    const actualOutcome = hr > ar ? 'H' : ar > hr ? 'A' : 'D';
+    const predOutcome   = ph > pa ? 'H' : pa > ph ? 'A' : 'D';
     if (ph === hr && pa === ar) {
       totalPts += SCORING.predictor.exactScore;
-      messages.push(`⚽ Exact score! ${m.home_team} ${hr}–${ar} ${m.away_team} → +${SCORING.predictor.exactScore} pts`);
+      totalPts += SCORING.predictor.correctOutcome;
+      totalPts += SCORING.predictor.correctGoalDiff;
+      messages.push(`✅ Exact score! ${m.home_team} ${hr}–${ar} ${m.away_team} → +${SCORING.predictor.exactScore} pts`);
+      messages.push(`✅ Correct outcome → +${SCORING.predictor.correctOutcome} pts`);
+      messages.push(`✅ Correct goal difference → +${SCORING.predictor.correctGoalDiff} pts`);
     } else {
-      const actualOutcome = hr > ar ? 'H' : ar > hr ? 'A' : 'D';
-      const predOutcome   = ph > pa ? 'H' : pa > ph ? 'A' : 'D';
       if (actualOutcome === predOutcome) {
         totalPts += SCORING.predictor.correctOutcome;
         messages.push(`✓ Correct outcome → +${SCORING.predictor.correctOutcome} pts`);
       }
-      if (Math.abs(hr-ar) === Math.abs(ph-pa) && !(ph===hr&&pa===ar)) {
+      if (Math.abs(hr-ar) === Math.abs(ph-pa)) {
         totalPts += SCORING.predictor.correctGoalDiff;
         messages.push(`✓ Correct goal difference → +${SCORING.predictor.correctGoalDiff} pts`);
       }
