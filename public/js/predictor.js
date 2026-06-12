@@ -252,20 +252,19 @@ function renderCompletedMatches(container) {
       userPredHtml = `${h}–${a}${scorers ? ` · ${scorers}` : ''}`;
     }
 
-    // Calculate score on the fly if result exists but score not yet saved
-    let displayScore = entry?.score;
-    if (hasResult && isLocked && pred && (displayScore === null || displayScore === undefined)) {
+    // Always recalculate score from scratch when result exists — never trust cached value
+    // This ensures scoring rule changes are always reflected correctly
+    let displayScore = null;
+    if (hasResult && isLocked && pred) {
       displayScore = calcPredScore(pred, match);
-      // Save it back to localStorage so it persists
+      // Save back to localStorage so total score display stays in sync
       if (displayScore !== null && entry?.stateDate) {
         try {
           const k = `et_state_${entry.stateDate}`;
           const st = JSON.parse(localStorage.getItem(k)) || {};
-          if (typeof st.score_pred !== 'number') {
-            st.score_pred = displayScore;
-            st.pred_result_shown = true;
-            localStorage.setItem(k, JSON.stringify(st));
-          }
+          st.score_pred = displayScore;
+          st.pred_result_shown = true;
+          localStorage.setItem(k, JSON.stringify(st));
         } catch {}
       }
     }
