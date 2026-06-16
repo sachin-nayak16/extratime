@@ -218,7 +218,10 @@ function submitDecodeAnswer(date) {
   } else {
     const userAns = document.getElementById('decode-player-inp')?.value?.trim() || '';
     const normalise = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-    const accepted = (riddleData.accepted || [riddleData.answer?.toLowerCase()]).map(a => normalise(a));
+    // Always include the primary answer, then add any accepted variations on top
+    const baseAnswer = riddleData.answer || '';
+    const variations = Array.isArray(riddleData.accepted) ? riddleData.accepted : (riddleData.accepted || '').split(',').map(s => s.trim()).filter(Boolean);
+    const accepted = [baseAnswer, ...variations].filter(Boolean).map(a => normalise(a));
     const userNorm = normalise(userAns);
     function lev(a, b) {
       const m = a.length, n = b.length;
