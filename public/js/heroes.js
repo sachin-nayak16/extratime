@@ -98,9 +98,9 @@ function heroFilter() {
   const dd = document.getElementById('legend-dd');
   dd.innerHTML='';
   if (!val || val.length < 2) { dd.style.display='none'; return; }
+  const unifyCountry = c => c.replace('West Germany', 'Germany');
   heroFiltered = ALL_PLAYERS.filter(p =>
     !heroGuessed.has(p.name) &&
-    const unifyCountry = c => c.replace('West Germany', 'Germany');
     (normalise(p.name).includes(val) || normalise(p.firstName).includes(val) || normalise(unifyCountry(p.country)).includes(unifyCountry(val)))
   ).slice(0, 20);
   if (!heroFiltered.length) { dd.style.display='none'; return; }
