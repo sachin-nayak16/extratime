@@ -36,6 +36,8 @@ async function initHeroes() {
     const { data } = await sb.from('daily_content').select('wc_hero').eq('date', CONFIG.today).maybeSingle();
     if (data?.wc_hero) {
       HEROES_TODAY = data.wc_hero;
+      // Normalise historical country names to modern equivalents
+      if (HEROES_TODAY.country === 'West Germany') HEROES_TODAY.country = 'Germany';
       // Build display string if not set
       if (!HEROES_TODAY.display) {
         HEROES_TODAY.display = `${HEROES_TODAY.firstName || HEROES_TODAY.name} — ${HEROES_TODAY.country}`;
@@ -98,7 +100,8 @@ function heroFilter() {
   if (!val || val.length < 2) { dd.style.display='none'; return; }
   heroFiltered = ALL_PLAYERS.filter(p =>
     !heroGuessed.has(p.name) &&
-    (normalise(p.name).includes(val) || normalise(p.firstName).includes(val) || normalise(p.country).includes(val))
+    const unifyCountry = c => c.replace('West Germany', 'Germany');
+    (normalise(p.name).includes(val) || normalise(p.firstName).includes(val) || normalise(unifyCountry(p.country)).includes(unifyCountry(val)))
   ).slice(0, 20);
   if (!heroFiltered.length) { dd.style.display='none'; return; }
   dd.style.cssText = 'display:block;max-height:280px;overflow-y:auto;';
@@ -106,7 +109,7 @@ function heroFilter() {
     const div = document.createElement('div');
     div.className = 'legend-opt';
     const same = p.firstName.toLowerCase() === p.name.toLowerCase();
-    div.innerHTML = `<div style="font-weight:500">${p.firstName}${same?'':` <span style="color:var(--text-3);font-weight:400">(${p.name})</span>`}</div><div class="legend-opt-sub">${p.country} · ${p.position} · ${p.born}</div>`;
+    div.innerHTML = `<div style="font-weight:500">${p.firstName}${same?'':` <span style="color:var(--text-3);font-weight:400">(${p.name})</span>`}</div><div class="legend-opt-sub">${p.country==='West Germany'?'Germany':p.country} · ${p.position} · ${p.born}</div>`;
     div.addEventListener('mousedown', e => { e.preventDefault(); heroPickPlayer(p); });
     dd.appendChild(div);
   });
@@ -123,6 +126,11 @@ function heroPickPlayer(p) {
 
 function heroGetClass(key, gv, tv) {
   if (gv===tv) return 'ok';
+  // Treat West Germany and Germany as equivalent for country comparisons
+  if (key==='country') {
+    const unify = c => (c==='West Germany' || c==='Germany') ? 'Germany' : c;
+    if (unify(gv)===unify(tv)) return 'ok';
+  }
   if (typeof gv==='number' && typeof tv==='number' && Math.abs(gv-tv)<=2) return 'close';
   if (key==='appearances' && typeof gv==='number' && typeof tv==='number' && Math.abs(gv-tv)<=3) return 'close';
   return 'no';
@@ -167,7 +175,7 @@ function submitHeroGuess() {
   const tr = document.createElement('tr');
   const nameTd = document.createElement('td');
   const same = guess.firstName.toLowerCase() === guess.name.toLowerCase();
-  nameTd.innerHTML = `<div class="player-cell">${guess.firstName}<div class="player-cell-sub">${same?'':guess.name+' · '}${guess.country}</div></div>`;
+  nameTd.innerHTML = `<div class="player-cell">${guess.firstName}<div class="player-cell-sub">${same?'':guess.name+' · '}${guess.country==='West Germany'?'Germany':guess.country}</div></div>`;
   tr.appendChild(nameTd);
 
   const catTds = [];
@@ -186,9 +194,11 @@ function submitHeroGuess() {
   heroSelected = null;
 
   const classes = HEROES_KEYS.map(k => heroGetClass(k, guess[k], HEROES_TODAY[k]));
-  const values = HEROES_KEYS.map((k,i) => {
+  const values = HEROES_KEYS.map((k, i) => {
     const arrow = (classes[i]==='close' || classes[i]==='no') ? heroGetArrow(k, guess[k], HEROES_TODAY[k]) : '';
-    return guess[k] + arrow;
+    const raw = guess[k];
+    const display = (k === 'country' && raw === 'West Germany') ? 'Germany' : raw;
+    return display + arrow;
   });
 
   heroRevealCells(catTds, classes, values, () => {
