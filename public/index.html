@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Extra Time — Daily Football Games for the 2026 FIFA World Cup</title>
-<meta name="description" content="Free daily football games for the 2026 FIFA World Cup. Crossword, quiz, score predictor, riddles and WC Heroes. A new challenge every day.">
+<meta name="description" content="Free daily football games for the 2026 FIFA World Cup. Crossword, quiz, Decode This & WC Heroes. A new challenge every day.">
 
 <!-- OG / Facebook -->
 <meta property="og:type"        content="website">
 <meta property="og:url"         content="https://www.playextratime.com">
 <meta property="og:title"       content="Extra Time — Daily Football Games">
-<meta property="og:description" content="Free daily World Cup games: crossword, quiz, predictor, Decode This & WC Heroes. Play every day at playextratime.com">
+<meta property="og:description" content="Free daily World Cup games: crossword, quiz, Decode This & WC Heroes. Play every day at playextratime.com">
 <meta property="og:image"       content="https://www.playextratime.com/og-image.png">
 <meta property="og:image:width"  content="1200">
 <meta property="og:image:height" content="630">
@@ -20,7 +20,7 @@
 <meta name="twitter:card"        content="summary_large_image">
 <meta name="twitter:site"        content="@playextratime">
 <meta name="twitter:title"       content="Extra Time — Daily Football Games">
-<meta name="twitter:description" content="Free daily World Cup games: crossword, quiz, predictor, Decode This & WC Heroes. A new challenge every day.">
+<meta name="twitter:description" content="Free daily World Cup games: crossword, quiz, Decode This & WC Heroes. A new challenge every day.">
 <meta name="twitter:image"       content="https://www.playextratime.com/og-image.png">
 
 <!-- Theme / PWA -->
@@ -50,7 +50,6 @@
   <button class="tab" onclick="showTab('decode',this)">Decode This</button>
   <button class="tab" onclick="showTab('quiz',this)">Quiz</button>
   <button class="tab" onclick="showTab('cw',this)">Crossword</button>
-  <button class="tab" onclick="showTab('pred',this)">Super Predictor</button>
   <button class="tab" onclick="showTab('lb',this)">Leaderboard</button>
 </div>
 
@@ -60,7 +59,6 @@
   <div class="sp"><div class="sl">Decode</div><div class="sv" id="sc-decode">—</div></div>
   <div class="sp"><div class="sl">Quiz</div><div class="sv" id="sc-quiz">—</div></div>
   <div class="sp"><div class="sl">Crossword</div><div class="sv" id="sc-crossword">—</div></div>
-  <div class="sp"><div class="sl">Predictor</div><div class="sv" id="sc-pred">—</div></div>
   <div class="sp"><button class="share-bar-btn" onclick="shareScore('all')" title="Share your scorecard">📤</button></div>
 </div>
 
@@ -114,15 +112,6 @@
 </div>
 
 <!-- SUPER PREDICTOR -->
-<div class="pane" id="pane-pred">
-  <p class="gtitle">Super Predictor</p>
-  <div class="scoring-note">
-    Exact scoreline = 5 pts · Correct outcome = 3 pts · Correct goal diff = 3 pts<br>
-    Goalscorer: FWD = 2 pts · MID = 3 pts · DEF = 4 pts
-  </div>
-  <div id="matches-container">Loading matches...</div>
-  <div class="fb" id="pred-fb"></div>
-</div>
 
 <!-- DECODE THIS -->
 <div class="pane" id="pane-decode">
@@ -217,7 +206,6 @@
 <script src="/js/auth.js"></script>
 <script src="/js/crossword.js"></script>
 <script src="/js/quiz.js"></script>
-<script src="/js/predictor.js"></script>
 <script src="/js/decode.js"></script>
 <script src="/js/heroes_db.js"></script>
 <script src="/js/heroes.js"></script>
