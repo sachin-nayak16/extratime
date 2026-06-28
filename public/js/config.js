@@ -72,7 +72,7 @@ function saveState(updates) {
 function updateScoreDisplay() {
   const state = getState();
   let total = 0;
-  ['quiz', 'pred', 'heroes', 'decode'].forEach(key => {
+  ['quiz', 'heroes', 'decode'].forEach(key => {
     const el = document.getElementById(`sc-${key}`);
     const score = state[`score_${key}`];
     if (el) {
@@ -119,7 +119,6 @@ function shareScore(game) {
   const scores = [];
   if (state.cw_solved) scores.push(`Crossword ✓ (${state.cw_attempts || 0} attempts)`);
   if (state.score_quiz !== undefined) scores.push(`Quiz: ${state.score_quiz}pts`);
-  if (state.score_pred === 'Locked') scores.push(`Predictor: Locked ✓`);
   if (state.decode_solved) scores.push(`Decode This ✓`);
   if (state.score_heroes !== undefined) scores.push(`WC Heroes: ${state.score_heroes}pts`);
   document.getElementById('share-scores').innerHTML = scores.join('<br>') || 'No scores yet today';

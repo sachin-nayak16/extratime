@@ -35,7 +35,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     todayContent = data;
   } catch {}
 
-  // Load yesterday's content for predictor results (only in normal mode)
   if (!previewDate) {
     try {
       const { data } = await sb.from('daily_content').select('*').eq('date', yesterdayStr).maybeSingle();
@@ -49,7 +48,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Init all games
   initCrossword(todayContent);
   initQuiz();
-  initPredictor(todayContent, yesterdayContent);
   initDecode();
   initHeroes(todayContent);
 
@@ -137,19 +135,11 @@ function shareScore(game) {
   else if (state.cw_played)  lines.push(`📰 Crossword: Not solved`);
   else                        lines.push(`⬜ Crossword: Not played`);
 
-  // Super Predictor
-  if (state.pred_locked) {
-    const pts = typeof state.score_pred === 'number' ? `${state.score_pred} pts` : 'Locked 🔒';
-    lines.push(`🎯 Predictor: ${pts}`);
-  } else {
-    lines.push(`⬜ Predictor: Not played`);
-  }
 
   lines.push('');
   const total = (state.score_heroes || 0)
     + (state.score_quiz || 0)
-    + (state.score_decode || 0)
-    + (typeof state.score_pred === 'number' ? state.score_pred : 0);
+    + (state.score_decode || 0);
   lines.push(`Total: ${total} pts 🔥`);
 
   const text = lines.join('\n');
