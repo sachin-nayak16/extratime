@@ -109,8 +109,27 @@ function submitAnswer() {
   document.getElementById('q-submit-btn').disabled=true;
 
   const q = qData[qIdx];
-  const accepted = (q.accepted||[q.answer.toLowerCase()]).map(a=>a.toLowerCase());
-  const correct = accepted.some(a => userAns===a || userAns.includes(a) || a.includes(userAns));
+  const accepted = [q.answer, ...(q.accepted||[])].map(a=>a.toLowerCase());
+
+  // Levenshtein distance for fuzzy matching
+  function levenshtein(a, b) {
+    const m = a.length, n = b.length;
+    const dp = Array.from({length: m+1}, (_, i) => Array.from({length: n+1}, (_, j) => i===0?j:j===0?i:0));
+    for (let i=1;i<=m;i++) for (let j=1;j<=n;j++)
+      dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+    return dp[m][n];
+  }
+
+  // Allow 1 typo for answers up to 5 chars, 2 typos for longer answers
+  function fuzzyMatch(userAns, accepted) {
+    return accepted.some(a => {
+      if (userAns===a || userAns.includes(a) || a.includes(userAns)) return true;
+      const maxDist = a.length <= 5 ? 1 : 2;
+      return levenshtein(userAns, a) <= maxDist;
+    });
+  }
+
+  const correct = fuzzyMatch(userAns, accepted);
 
   const ptsEarned = correct ? SCORING.quiz.perQuestion : 0;
   if (correct) { qScore += ptsEarned; if (!qAssistUsed) qAssists++; }
