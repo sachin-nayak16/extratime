@@ -369,6 +369,7 @@ function checkCW() {
     saveState({ cw_solved:true, cw_played:played, cw_won:won, cw_streak:streak, cw_best:best });
     buildCWStats(getState());
     saveScoreToDb('crossword', 'solved');
+    setTimeout(() => maybeShowNudge('cw'), 1200);
   }
   showCWFb(win?'ok':'warn', win ? '🏆 Solved! Added to your win streak.' : `You got ${correct} of ${total} words. Keep going!`);
 }

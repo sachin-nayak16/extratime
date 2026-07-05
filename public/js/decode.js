@@ -282,6 +282,7 @@ function submitDecodeAnswer(date) {
     document.getElementById('decode-overlay').remove();
     openDecodeRiddle(date, riddleData);
     renderDecodeList();
+    if (isToday) setTimeout(() => maybeShowNudge('decode'), 1200);
   }
 }
 

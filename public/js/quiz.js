@@ -169,6 +169,7 @@ function finishQuiz() {
   saveScoreToDb('quiz', qScore);
   updateScoreDisplay();
   showQuizDone(qScore);
+  setTimeout(() => maybeShowNudge('quiz'), 1200);
 }
 
 function showQuizDone(score) {

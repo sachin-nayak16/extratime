@@ -226,6 +226,7 @@ function submitHeroGuess() {
       fb.style.display = 'block';
       document.getElementById('legend-inp').disabled = true;
       document.getElementById('guess-count').textContent = `Solved in ${heroGuesses} guess${heroGuesses===1?'':'es'} · ${pts} pts`;
+      setTimeout(() => maybeShowNudge('heroes'), 1500);
     } else {
       document.getElementById('legend-inp').disabled = false;
       document.getElementById('legend-inp').value = '';
