@@ -29,7 +29,7 @@ function onSignedIn(user) {
   document.getElementById('user-pill').style.display = 'flex';
   document.getElementById('user-name').textContent = user.user_metadata?.username || user.email?.split('@')[0] || 'Player';
   // Hide leaderboard sign-in buttons
-  ['lb-signin-today','lb-signin-alltime'].forEach(id => {
+  ['lb-signin-today','lb-signin-weekly','lb-signin-alltime'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -44,7 +44,7 @@ function onSignedOut() {
   document.getElementById('user-pill').style.display = 'none';
   document.getElementById('streak-pill').style.display = 'none';
   // Show leaderboard sign-in buttons
-  ['lb-signin-today','lb-signin-alltime'].forEach(id => {
+  ['lb-signin-today','lb-signin-weekly','lb-signin-alltime'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'block';
   });

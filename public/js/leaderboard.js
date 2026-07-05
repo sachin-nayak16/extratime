@@ -7,6 +7,7 @@ async function loadLeaderboard() {
   lbLoaded = true;
   await Promise.all([
     loadLBToday(),
+    loadLBWeekly(),
     loadLBAllTime(),
   ]);
 }
@@ -34,6 +35,25 @@ async function loadLBToday() {
       { username:'tikitaka_fan', total_score:430, streak_days:3,  avatar_color:'#fee2e2' },
       { username:'mundialvibe',  total_score:410, streak_days:7,  avatar_color:'#e0f2fe' },
     ]);
+  }
+}
+
+async function loadLBWeekly() {
+  const container = document.getElementById('lb-weekly-card');
+  try {
+    const { data, error } = await sb
+      .from('leaderboard_weekly_view')
+      .select('username, total_score, streak_days, avatar_color')
+      .order('total_score', { ascending: false })
+      .limit(10);
+
+    if (error || !data?.length) {
+      container.innerHTML = '<p class="loading">No scores yet this week — be the first!</p>';
+      return;
+    }
+    renderLB(container, data);
+  } catch {
+    container.innerHTML = '<p class="loading">Could not load weekly scores.</p>';
   }
 }
 
@@ -83,8 +103,8 @@ function renderLB(container, data) {
 }
 
 function toggleLB(view) {
-  document.getElementById('lb-today').style.display = view==='today' ? 'block' : 'none';
-  document.getElementById('lb-alltime').style.display = view==='alltime' ? 'block' : 'none';
-  document.getElementById('tog-today').classList.toggle('active', view==='today');
-  document.getElementById('tog-alltime').classList.toggle('active', view==='alltime');
+  ['today','weekly','alltime'].forEach(v => {
+    document.getElementById(`lb-${v}`).style.display = view===v ? 'block' : 'none';
+    document.getElementById(`tog-${v}`).classList.toggle('active', view===v);
+  });
 }
